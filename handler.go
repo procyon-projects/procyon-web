@@ -1,36 +1,38 @@
 package web
 
-type HandlerMethod struct {
-	Path        string
-	Method      HttpMethod
-	HandlerFunc func(...interface{})
+import "net/http"
+
+type Handler interface {
+	DoGet(res http.ResponseWriter, req *http.Request)
+	DoPost(res http.ResponseWriter, req *http.Request)
+	DoPatch(res http.ResponseWriter, req *http.Request)
+	DoPut(res http.ResponseWriter, req *http.Request)
+	DoDelete(res http.ResponseWriter, req *http.Request)
 }
 
-func NewHandlerMethod(path string, handler func(...interface{})) *HandlerMethod {
-	return &HandlerMethod{}
+type DefaultHandler struct {
 }
 
-func (handlerMethod *HandlerMethod) WithGet() *HandlerMethod {
-	handlerMethod.Method = HttpMethodGet
-	return handlerMethod
+func NewDefaultHandler() *DefaultHandler {
+	return &DefaultHandler{}
 }
 
-func (handlerMethod *HandlerMethod) WithHead() *HandlerMethod {
-	handlerMethod.Method = HttpMethodHead
-	return handlerMethod
+func (handler *DefaultHandler) DoGet(res http.ResponseWriter, req *http.Request) {
+
 }
 
-func (handlerMethod *HandlerMethod) WithPost() *HandlerMethod {
-	handlerMethod.Method = HttpMethodPost
-	return handlerMethod
+func (handler *DefaultHandler) DoPost(res http.ResponseWriter, req *http.Request) {
+
 }
 
-func (handlerMethod *HandlerMethod) WithPut() *HandlerMethod {
-	handlerMethod.Method = HttpMethodPut
-	return handlerMethod
+func (handler *DefaultHandler) DoPatch(res http.ResponseWriter, req *http.Request) {
+
 }
 
-func (handlerMethod *HandlerMethod) WithPatch() *HandlerMethod {
-	handlerMethod.Method = HttpMethodPatch
-	return handlerMethod
+func (handler *DefaultHandler) DoPut(res http.ResponseWriter, req *http.Request) {
+
+}
+
+func (handler *DefaultHandler) DoDelete(res http.ResponseWriter, req *http.Request) {
+
 }
