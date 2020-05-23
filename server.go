@@ -6,6 +6,8 @@ import (
 
 type Server interface {
 	Run(args ...string) error
+	Stop() error
+	GetPort() int
 }
 
 type DefaultWebServer struct {
@@ -14,6 +16,14 @@ type DefaultWebServer struct {
 
 func (server *DefaultWebServer) Run(args ...string) error {
 	return http.ListenAndServe(":8080", server)
+}
+
+func (server *DefaultWebServer) Stop() error {
+	return nil
+}
+
+func (server *DefaultWebServer) GetPort() int {
+	return 8080
 }
 
 func (server *DefaultWebServer) ServeHTTP(res http.ResponseWriter, request *http.Request) {
@@ -32,7 +42,7 @@ func (server *DefaultWebServer) ServeHTTP(res http.ResponseWriter, request *http
 	res.WriteHeader(200)
 }
 
-func GetWebServer() (Server, error) {
+func newWebServer() (Server, error) {
 	return &DefaultWebServer{
 		handler: NewDefaultHandler(),
 	}, nil
