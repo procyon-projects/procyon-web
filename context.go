@@ -4,18 +4,15 @@ import (
 	"github.com/Rollcomp/procyon-context"
 )
 
-// WebApplicationContext
 type ApplicationContext interface {
 	context.ApplicationContext
 }
 
-// ConfigurableWebApplicationContext
 type ConfigurableApplicationContext interface {
 	ApplicationContext
 	context.ConfigurableContext
 }
 
-// GenericWebApplicationContext
 type GenericApplicationContext struct {
 	*context.GenericApplicationContext
 }
@@ -26,7 +23,6 @@ func NewGenericApplicationContext(configurableContextAdapter context.Configurabl
 	}
 }
 
-// WebServeApplicationContext
 type ServerApplicationContext interface {
 	context.ApplicationContext
 	GetWebServer() Server
@@ -37,9 +33,6 @@ type ConfigurableServerApplicationContext interface {
 	context.ConfigurableContext
 }
 
-// ---------------------------------------------------
-
-// ProcyonServerApplicationContext
 type ProcyonServerApplicationContext struct {
 	*GenericApplicationContext
 	server Server
