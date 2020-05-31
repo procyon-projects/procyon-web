@@ -35,3 +35,11 @@ func WithBody(body interface{}) ResponseBodyOption {
 		body.body = body
 	}
 }
+
+func (body *ResponseBody) GetStatus() int {
+	return body.status
+}
+
+func (body *ResponseBody) GetBody() interface{} {
+	return body.body
+}
