@@ -9,7 +9,7 @@ type Router interface {
 	DoService(res HttpResponse, req HttpRequest) error
 	DoDispatch(res HttpResponse, req HttpRequest) error
 	GetHandlerChain(req HttpRequest) (*HandlerChain, error)
-	GetHandlerAdapter(req HttpRequest) (*HandlerAdapter, error)
+	GetHandlerAdapter(handler interface{}) (HandlerAdapter, error)
 }
 
 const ApplicationContextAttribute = "DEFAULT_HANDLER_CONTEXT"
@@ -60,7 +60,7 @@ func (router *SimpleRouter) DoService(res HttpResponse, req HttpRequest) error {
 }
 
 func (router *SimpleRouter) DoDispatch(res HttpResponse, req HttpRequest) error {
-	executionChain, err := router.GetHandlerExecutionChain(req)
+	executionChain, err := router.GetHandlerChain(req)
 	if err != nil {
 		return err
 	}
@@ -77,7 +77,7 @@ func (router *SimpleRouter) DoDispatch(res HttpResponse, req HttpRequest) error 
 	return nil
 }
 
-func (router *SimpleRouter) GetHandlerExecutionChain(req HttpRequest) (*HandlerChain, error) {
+func (router *SimpleRouter) GetHandlerChain(req HttpRequest) (*HandlerChain, error) {
 	if len(router.handlerMappings) > 0 {
 		for _, handlerMapping := range router.handlerMappings {
 			chain := handlerMapping.GetHandlerChain(req)
