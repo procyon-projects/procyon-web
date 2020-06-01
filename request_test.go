@@ -33,3 +33,9 @@ func TestHandlerMethodRegistry(t *testing.T) {
 	assert.Equal(t, len(registry.infoRegistryMap), 2)
 	assert.Equal(t, len(registry.infoRegistryMap["/api/test"]), 3)
 }
+
+func Test(t *testing.T) {
+	x := NewProcyonServerApplicationContext()
+	x.Configure()
+	x.GetWebServer()
+}

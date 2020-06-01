@@ -1,38 +1,61 @@
 package web
 
-import "net/http"
-
-type Handler interface {
-	DoGet(res http.ResponseWriter, req *http.Request)
-	DoPost(res http.ResponseWriter, req *http.Request)
-	DoPatch(res http.ResponseWriter, req *http.Request)
-	DoPut(res http.ResponseWriter, req *http.Request)
-	DoDelete(res http.ResponseWriter, req *http.Request)
+type HandlerAdapter interface {
+	Supports(handler interface{}) bool
+	Handle(handler interface{}, res HttpResponse, req HttpRequest) interface{}
 }
 
-type DefaultHandler struct {
+type HandlerChain struct {
+	handler      interface{}
+	interceptors []HandlerInterceptor
 }
 
-func NewDefaultHandler() *DefaultHandler {
-	return &DefaultHandler{}
+type HandlerChainOption func(chain *HandlerChain)
+
+func NewHandlerExecutionChain(handler interface{}, options ...HandlerChainOption) *HandlerChain {
+	chain := &HandlerChain{
+		handler: handler,
+	}
+	if len(options) == 0 {
+		chain.interceptors = make([]HandlerInterceptor, 0)
+	}
+	for _, option := range options {
+		option(chain)
+	}
+	return chain
 }
 
-func (handler *DefaultHandler) DoGet(res http.ResponseWriter, req *http.Request) {
-
+func WithInterceptors(interceptors []HandlerInterceptor) HandlerChainOption {
+	return func(chain *HandlerChain) {
+		chain.interceptors = interceptors
+	}
 }
 
-func (handler *DefaultHandler) DoPost(res http.ResponseWriter, req *http.Request) {
-
+func (chain *HandlerChain) getHandler() interface{} {
+	return chain.handler
 }
 
-func (handler *DefaultHandler) DoPatch(res http.ResponseWriter, req *http.Request) {
-
+func (chain *HandlerChain) getInterceptors() []HandlerInterceptor {
+	return chain.interceptors
 }
 
-func (handler *DefaultHandler) DoPut(res http.ResponseWriter, req *http.Request) {
-
+func (chain *HandlerChain) applyHandleBefore(res HttpResponse, req HttpRequest) {
+	for _, interceptor := range chain.interceptors {
+		interceptor.HandleBefore(chain, res, req)
+	}
 }
 
-func (handler *DefaultHandler) DoDelete(res http.ResponseWriter, req *http.Request) {
+func (chain *HandlerChain) applyHandleAfter(res HttpResponse, req HttpRequest) {
+	for _, interceptor := range chain.interceptors {
+		interceptor.HandleAfter(chain, res, req)
+	}
+}
 
+type HandlerInterceptor interface {
+	HandleBefore(handler interface{}, res HttpResponse, req HttpRequest)
+	HandleAfter(handler interface{}, res HttpResponse, req HttpRequest)
+}
+
+type HandlerMapping interface {
+	GetHandlerChain(req HttpRequest) *HandlerChain
 }

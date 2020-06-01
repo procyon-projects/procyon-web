@@ -11,7 +11,7 @@ type Server interface {
 }
 
 type DefaultWebServer struct {
-	handler Handler
+	router Router
 }
 
 func (server *DefaultWebServer) Run(args ...string) error {
@@ -26,24 +26,25 @@ func (server *DefaultWebServer) GetPort() int {
 	return 8080
 }
 
-func (server *DefaultWebServer) ServeHTTP(res http.ResponseWriter, request *http.Request) {
+func (server *DefaultWebServer) ServeHTTP(response http.ResponseWriter, request *http.Request) {
+	req := newHttpRequest(request)
+	res := newHttpResponse(response)
 	switch request.Method {
 	case http.MethodGet:
-		server.handler.DoDelete(res, request)
+		_ = server.router.DoDelete(res, req)
 	case http.MethodPost:
-		server.handler.DoPost(res, request)
+		_ = server.router.DoPost(res, req)
 	case http.MethodPut:
-		server.handler.DoPut(res, request)
+		_ = server.router.DoPut(res, req)
 	case http.MethodDelete:
-		server.handler.DoPut(res, request)
+		_ = server.router.DoPut(res, req)
 	case http.MethodPatch:
-		server.handler.DoPatch(res, request)
+		_ = server.router.DoPatch(res, req)
 	}
-	res.WriteHeader(200)
 }
 
 func newWebServer() (Server, error) {
 	return &DefaultWebServer{
-		handler: NewDefaultHandler(),
+		router: NewSimpleRouter(),
 	}, nil
 }
