@@ -1,5 +1,7 @@
 package web
 
+import core "github.com/Rollcomp/procyon-core"
+
 type HandlerMethodReturnValueHandler interface {
 	SupportsReturnType(returnValueType HandlerMethodReturnValue) bool
 	HandleReturnValue(returnValue interface{}, returnValueParameter HandlerMethodReturnValue, request HttpRequest) (interface{}, error)
@@ -43,4 +45,24 @@ func (h *HandlerMethodReturnValueHandlers) findReturnValueHandler(returnValuePar
 
 func (h *HandlerMethodReturnValueHandlers) AddMethodReturnValueHandler(handlers ...HandlerMethodReturnValueHandler) {
 	h.returnValueHandlers = append(h.returnValueHandlers, handlers...)
+}
+
+type ResponseBodyReturnValueHandler struct {
+}
+
+func NewResponseBodyReturnValueHandler() ResponseBodyReturnValueHandler {
+	return ResponseBodyReturnValueHandler{}
+}
+
+func (h ResponseBodyReturnValueHandler) SupportsReturnType(returnValueType HandlerMethodReturnValue) bool {
+	if returnValueType.GetReturnTypeCount() == 2 && returnValueType.HasErrorType() &&
+		returnValueType.HasType(core.GetType((*ResponseBody)(nil))) {
+		return true
+	}
+	return false
+}
+
+func (h ResponseBodyReturnValueHandler) HandleReturnValue(returnValue interface{}, returnValueParameter HandlerMethodReturnValue, request HttpRequest) (interface{}, error) {
+	/* TODO it will be completed */
+	return nil, nil
 }
