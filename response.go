@@ -7,15 +7,15 @@ type Response interface {
 	GetBody() interface{}
 }
 
-type ResponseBody struct {
+type ResponseEntity struct {
 	status int
 	body   interface{}
 }
 
-type ResponseBodyOption func(body *ResponseBody)
+type ResponseEntityOption func(body *ResponseEntity)
 
-func NewResponseBody(options ...ResponseBodyOption) *ResponseBody {
-	body := &ResponseBody{
+func NewResponseEntity(options ...ResponseEntityOption) *ResponseEntity {
+	body := &ResponseEntity{
 		status: http.StatusOK,
 	}
 	for _, option := range options {
@@ -24,22 +24,22 @@ func NewResponseBody(options ...ResponseBodyOption) *ResponseBody {
 	return body
 }
 
-func WithStatus(status int) ResponseBodyOption {
-	return func(body *ResponseBody) {
+func WithStatus(status int) ResponseEntityOption {
+	return func(body *ResponseEntity) {
 		body.status = status
 	}
 }
 
-func WithBody(body interface{}) ResponseBodyOption {
-	return func(body *ResponseBody) {
+func WithBody(body interface{}) ResponseEntityOption {
+	return func(body *ResponseEntity) {
 		body.body = body
 	}
 }
 
-func (body *ResponseBody) GetStatus() int {
+func (body *ResponseEntity) GetStatus() int {
 	return body.status
 }
 
-func (body *ResponseBody) GetBody() interface{} {
+func (body *ResponseEntity) GetBody() interface{} {
 	return body.body
 }

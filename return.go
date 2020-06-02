@@ -4,7 +4,7 @@ import core "github.com/Rollcomp/procyon-core"
 
 type HandlerMethodReturnValueHandler interface {
 	SupportsReturnType(returnValueType HandlerMethodReturnValue) bool
-	HandleReturnValue(returnValue interface{}, returnValueParameter HandlerMethodReturnValue, request HttpRequest) (interface{}, error)
+	HandleReturnValue(returnValues []interface{}, returnValueParameter HandlerMethodReturnValue, request HttpRequest) (interface{}, error)
 }
 
 type HandlerMethodReturnValueHandlers struct {
@@ -26,12 +26,12 @@ func (h *HandlerMethodReturnValueHandlers) SupportsReturnType(returnValueType Ha
 	return false
 }
 
-func (h *HandlerMethodReturnValueHandlers) HandleReturnValue(returnValue interface{}, returnValueParameter HandlerMethodReturnValue, request HttpRequest) (interface{}, error) {
+func (h *HandlerMethodReturnValueHandlers) HandleReturnValue(returnValues []interface{}, returnValueParameter HandlerMethodReturnValue, request HttpRequest) (interface{}, error) {
 	handler := h.findReturnValueHandler(returnValueParameter)
 	if handler == nil {
 		return nil, NewNoHandlerParameterResolver("Return value handler not found")
 	}
-	return handler.HandleReturnValue(returnValue, returnValueParameter, request)
+	return handler.HandleReturnValue(returnValues, returnValueParameter, request)
 }
 
 func (h *HandlerMethodReturnValueHandlers) findReturnValueHandler(returnValueParameter HandlerMethodReturnValue) HandlerMethodReturnValueHandler {
@@ -47,22 +47,22 @@ func (h *HandlerMethodReturnValueHandlers) AddMethodReturnValueHandler(handlers 
 	h.returnValueHandlers = append(h.returnValueHandlers, handlers...)
 }
 
-type ResponseBodyReturnValueHandler struct {
+type ResponseEntityReturnValueHandler struct {
 }
 
-func NewResponseBodyReturnValueHandler() ResponseBodyReturnValueHandler {
-	return ResponseBodyReturnValueHandler{}
+func NewResponseBodyReturnValueHandler() ResponseEntityReturnValueHandler {
+	return ResponseEntityReturnValueHandler{}
 }
 
-func (h ResponseBodyReturnValueHandler) SupportsReturnType(returnValueType HandlerMethodReturnValue) bool {
+func (h ResponseEntityReturnValueHandler) SupportsReturnType(returnValueType HandlerMethodReturnValue) bool {
 	if returnValueType.GetReturnTypeCount() == 2 && returnValueType.HasErrorType() &&
-		returnValueType.HasType(core.GetType((*ResponseBody)(nil))) {
+		returnValueType.HasType(core.GetType((*ResponseEntity)(nil))) {
 		return true
 	}
 	return false
 }
 
-func (h ResponseBodyReturnValueHandler) HandleReturnValue(returnValue interface{}, returnValueParameter HandlerMethodReturnValue, request HttpRequest) (interface{}, error) {
+func (h ResponseEntityReturnValueHandler) HandleReturnValue(returnValues []interface{}, returnValueParameter HandlerMethodReturnValue, request HttpRequest) (interface{}, error) {
 	/* TODO it will be completed */
 	return nil, nil
 }
