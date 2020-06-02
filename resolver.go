@@ -44,3 +44,18 @@ func (r *HandlerMethodParameterResolvers) findParameterResolver(parameter Handle
 func (r *HandlerMethodParameterResolvers) AddMethodParameterResolver(resolvers ...HandlerMethodParameterResolver) {
 	r.resolvers = append(r.resolvers, resolvers...)
 }
+
+type DefaultMethodParameterResolver struct {
+}
+
+func NewDefaultMethodParameterResolver() DefaultMethodParameterResolver {
+	return DefaultMethodParameterResolver{}
+}
+
+func (r DefaultMethodParameterResolver) SupportsParameter(parameter HandlerMethodParameter) bool {
+	return true
+}
+
+func (r DefaultMethodParameterResolver) ResolveParameter(parameter HandlerMethodParameter, request HttpRequest) (interface{}, error) {
+	return nil, nil
+}

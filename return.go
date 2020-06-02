@@ -50,7 +50,7 @@ func (h *HandlerMethodReturnValueHandlers) AddMethodReturnValueHandler(handlers 
 type ResponseEntityReturnValueHandler struct {
 }
 
-func NewResponseBodyReturnValueHandler() ResponseEntityReturnValueHandler {
+func NewResponseEntityReturnValueHandler() ResponseEntityReturnValueHandler {
 	return ResponseEntityReturnValueHandler{}
 }
 

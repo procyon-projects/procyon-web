@@ -12,9 +12,21 @@ type RequestMappingHandlerAdapter struct {
 
 func NewRequestMappingHandlerAdapter() *RequestMappingHandlerAdapter {
 	return &RequestMappingHandlerAdapter{
-		parameterResolvers:  NewHandlerMethodParameterResolvers(),
-		returnValueHandlers: NewHandlerMethodReturnValueHandlers(),
+		parameterResolvers:  getDefaultMethodParameterResolvers(),
+		returnValueHandlers: getDefaultReturnValueHandlers(),
 	}
+}
+
+func getDefaultMethodParameterResolvers() *HandlerMethodParameterResolvers {
+	resolvers := NewHandlerMethodParameterResolvers()
+	resolvers.AddMethodParameterResolver(NewDefaultMethodParameterResolver())
+	return resolvers
+}
+
+func getDefaultReturnValueHandlers() *HandlerMethodReturnValueHandlers {
+	handlers := NewHandlerMethodReturnValueHandlers()
+	handlers.AddMethodReturnValueHandler(NewResponseEntityReturnValueHandler())
+	return handlers
 }
 
 func (adapter RequestMappingHandlerAdapter) Supports(handler interface{}) bool {
