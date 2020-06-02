@@ -1,8 +1,17 @@
 package web
 
-type HandlerAdapter interface {
-	Supports(handler interface{}) bool
-	Handle(handler interface{}, res HttpResponse, req HttpRequest) interface{}
+import core "github.com/Rollcomp/procyon-core"
+
+type HandlerMethod struct {
+	parameters []HandlerMethodParameter
+}
+
+type HandlerMethodParameter struct {
+	typ *core.Type
+}
+
+type HandlerMethodReturnValue struct {
+	typ []*core.Type
 }
 
 type HandlerChain struct {

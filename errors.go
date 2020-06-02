@@ -23,3 +23,15 @@ func NewNoHandlerFoundError(message string) NoHandlerFoundError {
 func (err NoHandlerFoundError) Error() string {
 	return err.message
 }
+
+type NoHandlerParameterResolver struct {
+	message string
+}
+
+func NewNoHandlerParameterResolver(message string) NoHandlerParameterResolver {
+	return NoHandlerParameterResolver{message}
+}
+
+func (err NoHandlerParameterResolver) Error() string {
+	return err.message
+}

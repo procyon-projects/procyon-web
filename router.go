@@ -12,7 +12,7 @@ type Router interface {
 	GetHandlerAdapter(handler interface{}) (HandlerAdapter, error)
 }
 
-const ApplicationContextAttribute = "DEFAULT_HANDLER_CONTEXT"
+const ApplicationContextAttribute = "SIMPLE_ROUTER_WEB_CONTEXT"
 
 type SimpleRouter struct {
 	context         ApplicationContext
