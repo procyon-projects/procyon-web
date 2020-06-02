@@ -55,11 +55,16 @@ func NewResponseBodyReturnValueHandler() ResponseEntityReturnValueHandler {
 }
 
 func (h ResponseEntityReturnValueHandler) SupportsReturnType(returnValueType HandlerMethodReturnValue) bool {
-	if returnValueType.GetReturnTypeCount() == 2 && returnValueType.HasErrorType() &&
-		returnValueType.HasType(core.GetType((*ResponseEntity)(nil))) {
-		return true
+	if !returnValueType.HasType(core.GetType((*ResponseEntity)(nil))) {
+		return false
 	}
-	return false
+	if returnValueType.GetReturnTypeCount() == 2 {
+		if returnValueType.HasErrorType() {
+			return true
+		}
+		return false
+	}
+	return true
 }
 
 func (h ResponseEntityReturnValueHandler) HandleReturnValue(returnValues []interface{}, returnValueParameter HandlerMethodReturnValue, request HttpRequest) (interface{}, error) {
