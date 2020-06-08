@@ -45,17 +45,17 @@ func (r *HandlerMethodParameterResolvers) AddMethodParameterResolver(resolvers .
 	r.resolvers = append(r.resolvers, resolvers...)
 }
 
-type DefaultMethodParameterResolver struct {
+type RequestMethodParameterResolver struct {
 }
 
-func NewDefaultMethodParameterResolver() DefaultMethodParameterResolver {
-	return DefaultMethodParameterResolver{}
+func NewRequestMethodParameterResolver() RequestMethodParameterResolver {
+	return RequestMethodParameterResolver{}
 }
 
-func (r DefaultMethodParameterResolver) SupportsParameter(parameter HandlerMethodParameter) bool {
+func (r RequestMethodParameterResolver) SupportsParameter(parameter HandlerMethodParameter) bool {
 	return true
 }
 
-func (r DefaultMethodParameterResolver) ResolveParameter(parameter HandlerMethodParameter, request HttpRequest) (interface{}, error) {
+func (r RequestMethodParameterResolver) ResolveParameter(parameter HandlerMethodParameter, request HttpRequest) (interface{}, error) {
 	return nil, nil
 }

@@ -10,22 +10,43 @@ type RequestMappingHandlerAdapter struct {
 	returnValueHandlers *HandlerMethodReturnValueHandlers
 }
 
-func NewRequestMappingHandlerAdapter() *RequestMappingHandlerAdapter {
-	return &RequestMappingHandlerAdapter{
+type RequestMappingHandlerAdapterOption func(adapter *RequestMappingHandlerAdapter)
+
+func NewRequestMappingHandlerAdapter(options ...RequestMappingHandlerAdapterOption) *RequestMappingHandlerAdapter {
+	adapter := &RequestMappingHandlerAdapter{
 		parameterResolvers:  getDefaultMethodParameterResolvers(),
 		returnValueHandlers: getDefaultReturnValueHandlers(),
+	}
+	for _, option := range options {
+		option(adapter)
+	}
+	return adapter
+}
+
+func WithCustomParameterResolvers(resolvers ...HandlerMethodParameterResolver) RequestMappingHandlerAdapterOption {
+	return func(adapter *RequestMappingHandlerAdapter) {
+		adapter.parameterResolvers.AddMethodParameterResolver(resolvers...)
+	}
+}
+
+func WithCustomReturnValueHandlers(handlers ...HandlerMethodReturnValueHandler) RequestMappingHandlerAdapterOption {
+	return func(adapter *RequestMappingHandlerAdapter) {
+		adapter.returnValueHandlers.AddMethodReturnValueHandler(handlers...)
 	}
 }
 
 func getDefaultMethodParameterResolvers() *HandlerMethodParameterResolvers {
 	resolvers := NewHandlerMethodParameterResolvers()
-	resolvers.AddMethodParameterResolver(NewDefaultMethodParameterResolver())
+	resolvers.AddMethodParameterResolver(NewRequestMethodParameterResolver())
 	return resolvers
 }
 
 func getDefaultReturnValueHandlers() *HandlerMethodReturnValueHandlers {
 	handlers := NewHandlerMethodReturnValueHandlers()
-	handlers.AddMethodReturnValueHandler(NewResponseEntityReturnValueHandler())
+	handlers.AddMethodReturnValueHandler(
+		NewResponseEntityReturnValueHandler(),
+		NewErrorReturnValueHandler(),
+	)
 	return handlers
 }
 

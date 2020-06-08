@@ -1,49 +1,61 @@
 package web
 
-import core "github.com/Rollcomp/procyon-core"
+import core "github.com/procyon-projects/procyon-core"
 
 type HandlerMethod struct {
-	parameters  []HandlerMethodParameter
-	returnValue HandlerMethodReturnValue
+	parameters   []HandlerMethodParameter
+	returnValues []HandlerMethodReturnValue
 }
 
 func NewHandlerMethod(method interface{}) HandlerMethod {
-	return HandlerMethod{}
+	return HandlerMethod{
+		make([]HandlerMethodParameter, 0),
+		make([]HandlerMethodReturnValue, 0),
+	}
+}
+
+func (m HandlerMethod) GetParameterCount() int {
+	return len(m.parameters)
+}
+
+func (m HandlerMethod) GetReturnTypeCount() int {
+	return len(m.returnValues)
+}
+
+func (m HandlerMethod) GetParameterTypes() []HandlerMethodParameter {
+	return m.parameters
+}
+
+func (m HandlerMethod) GetReturnValues() []HandlerMethodReturnValue {
+	return m.returnValues
 }
 
 type HandlerMethodParameter struct {
 	typ *core.Type
 }
 
-type HandlerMethodReturnValue struct {
-	typ []*core.Type
+func NewHandlerMethodParameter(typ *core.Type) HandlerMethodParameter {
+	return HandlerMethodParameter{
+		typ,
+	}
 }
 
-func NewHandlerMethodReturnValue(typ []*core.Type) HandlerMethodReturnValue {
+func (r HandlerMethodParameter) GetType() *core.Type {
+	return r.typ
+}
+
+type HandlerMethodReturnValue struct {
+	typ *core.Type
+}
+
+func NewHandlerMethodReturnValue(typ *core.Type) HandlerMethodReturnValue {
 	return HandlerMethodReturnValue{
 		typ,
 	}
 }
 
-func (returnValue HandlerMethodReturnValue) GetReturnTypeCount() int {
-	return len(returnValue.typ)
-}
-
-func (returnValue HandlerMethodReturnValue) GetTypes() []*core.Type {
-	return returnValue.typ
-}
-
-func (returnValue HandlerMethodReturnValue) HasType(typ *core.Type) bool {
-	for _, t := range returnValue.typ {
-		if typ.Typ == t.Typ {
-			return true
-		}
-	}
-	return false
-}
-
-func (returnValue HandlerMethodReturnValue) HasErrorType() bool {
-	return returnValue.HasType(core.GetType((error)(nil)))
+func (r HandlerMethodReturnValue) GetType() *core.Type {
+	return r.typ
 }
 
 type HandlerChain struct {
@@ -90,13 +102,4 @@ func (chain *HandlerChain) applyHandleAfter(res HttpResponse, req HttpRequest) {
 	for _, interceptor := range chain.interceptors {
 		interceptor.HandleAfter(chain, res, req)
 	}
-}
-
-type HandlerInterceptor interface {
-	HandleBefore(handler interface{}, res HttpResponse, req HttpRequest)
-	HandleAfter(handler interface{}, res HttpResponse, req HttpRequest)
-}
-
-type HandlerMapping interface {
-	GetHandlerChain(req HttpRequest) *HandlerChain
 }

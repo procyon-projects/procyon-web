@@ -1,7 +1,7 @@
 package web
 
 import (
-	"github.com/Rollcomp/procyon-core"
+	"github.com/procyon-projects/procyon-core"
 )
 
 type ConfigurableWebEnvironment interface {

@@ -1,7 +1,7 @@
 package web
 
 import (
-	"github.com/Rollcomp/procyon-context"
+	"github.com/procyon-projects/procyon-context"
 )
 
 type ApplicationContext interface {

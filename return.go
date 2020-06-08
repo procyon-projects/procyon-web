@@ -1,6 +1,6 @@
 package web
 
-import core "github.com/Rollcomp/procyon-core"
+import core "github.com/procyon-projects/procyon-core"
 
 type HandlerMethodReturnValueHandler interface {
 	SupportsReturnType(returnValueType HandlerMethodReturnValue) bool
@@ -55,19 +55,32 @@ func NewResponseEntityReturnValueHandler() ResponseEntityReturnValueHandler {
 }
 
 func (h ResponseEntityReturnValueHandler) SupportsReturnType(returnValueType HandlerMethodReturnValue) bool {
-	if !returnValueType.HasType(core.GetType((*ResponseEntity)(nil))) {
-		return false
+	if returnValueType.GetType().Typ == core.GetType((*ResponseEntity)(nil)).Typ {
+		return true
 	}
-	if returnValueType.GetReturnTypeCount() == 2 {
-		if returnValueType.HasErrorType() {
-			return true
-		}
-		return false
-	}
-	return true
+	return false
 }
 
 func (h ResponseEntityReturnValueHandler) HandleReturnValue(returnValues []interface{}, returnValueParameter HandlerMethodReturnValue, request HttpRequest) (interface{}, error) {
+	/* TODO it will be completed */
+	return nil, nil
+}
+
+type ErrorReturnValueHandler struct {
+}
+
+func NewErrorReturnValueHandler() ErrorReturnValueHandler {
+	return ErrorReturnValueHandler{}
+}
+
+func (h ErrorReturnValueHandler) SupportsReturnType(returnValueType HandlerMethodReturnValue) bool {
+	if returnValueType.GetType().Typ == core.GetType((error)(nil)).Typ {
+		return true
+	}
+	return false
+}
+
+func (h ErrorReturnValueHandler) HandleReturnValue(returnValues []interface{}, returnValueParameter HandlerMethodReturnValue, request HttpRequest) (interface{}, error) {
 	/* TODO it will be completed */
 	return nil, nil
 }

@@ -1,7 +1,7 @@
 package web
 
 import (
-	"github.com/codnect/go-reflect"
+	core "github.com/procyon-projects/procyon-core"
 	"log"
 	"net/http"
 )
@@ -29,8 +29,8 @@ func NewHandlerInfo(handler RequestHandlerFunc, options ...RequestHandlerOption)
 	if handler == nil {
 		log.Fatal("Handler must not be null")
 	}
-	typ := reflect.GetType(handler)
-	if !typ.IsFunction() {
+	typ := core.GetType(handler)
+	if !core.IsFunc(typ) {
 		log.Fatal("Handler must be function")
 	}
 	handlerMethod := &RequestHandlerInfo{
