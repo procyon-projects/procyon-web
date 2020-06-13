@@ -93,13 +93,15 @@ func (chain *HandlerChain) getInterceptors() []HandlerInterceptor {
 }
 
 func (chain *HandlerChain) applyHandleBefore(res HttpResponse, req HttpRequest) {
-	for _, interceptor := range chain.interceptors {
+	interceptors := chain.interceptors
+	for _, interceptor := range interceptors {
 		interceptor.HandleBefore(chain, res, req)
 	}
 }
 
 func (chain *HandlerChain) applyHandleAfter(res HttpResponse, req HttpRequest) {
-	for _, interceptor := range chain.interceptors {
+	interceptors := chain.interceptors
+	for _, interceptor := range interceptors {
 		interceptor.HandleAfter(chain, res, req)
 	}
 }

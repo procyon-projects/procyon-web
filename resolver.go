@@ -16,7 +16,8 @@ func NewHandlerMethodParameterResolvers() *HandlerMethodParameterResolvers {
 }
 
 func (r *HandlerMethodParameterResolvers) SupportsParameter(parameter HandlerMethodParameter) bool {
-	for _, resolver := range r.resolvers {
+	resolvers := r.resolvers
+	for _, resolver := range resolvers {
 		if resolver.SupportsParameter(parameter) {
 			return true
 		}
@@ -27,13 +28,14 @@ func (r *HandlerMethodParameterResolvers) SupportsParameter(parameter HandlerMet
 func (r *HandlerMethodParameterResolvers) ResolveParameter(parameter HandlerMethodParameter, request HttpRequest) (interface{}, error) {
 	resolver := r.findParameterResolver(parameter)
 	if resolver == nil {
-		return nil, NewNoHandlerParameterResolver("Parameter resolver not found")
+		return nil, NewNoHandlerParameterResolverError("Parameter resolver not found")
 	}
 	return resolver.ResolveParameter(parameter, request)
 }
 
 func (r *HandlerMethodParameterResolvers) findParameterResolver(parameter HandlerMethodParameter) HandlerMethodParameterResolver {
-	for _, resolver := range r.resolvers {
+	resolvers := r.resolvers
+	for _, resolver := range resolvers {
 		if resolver.SupportsParameter(parameter) {
 			return resolver
 		}

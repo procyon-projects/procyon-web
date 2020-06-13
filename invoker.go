@@ -15,18 +15,19 @@ func NewDefaultHandlerInvoker(invokerProcessor HandlerInvokerProcessor) DefaultH
 }
 
 func (handlerInvoker DefaultHandlerInvoker) InvokeHandler() error {
-	if handlerInvoker.invokerProcessor == nil {
+	invokerProcessor := handlerInvoker.invokerProcessor
+	if invokerProcessor == nil {
 		return nil
 	}
-	_, err := handlerInvoker.invokerProcessor.PreProcess(nil)
+	_, err := invokerProcessor.PreProcess(nil)
 	if err != nil {
 		return err
 	}
-	_, err = handlerInvoker.invokerProcessor.Process(nil)
+	_, err = invokerProcessor.Process(nil)
 	if err != nil {
 		return err
 	}
-	_, err = handlerInvoker.invokerProcessor.PostProcess(nil)
+	_, err = invokerProcessor.PostProcess(nil)
 	if err != nil {
 		return err
 	}

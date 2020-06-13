@@ -2,7 +2,6 @@ package web
 
 import (
 	core "github.com/procyon-projects/procyon-core"
-	"log"
 	"net/http"
 )
 
@@ -27,11 +26,11 @@ type RequestHandlerInfo struct {
 
 func NewHandlerInfo(handler RequestHandlerFunc, options ...RequestHandlerOption) *RequestHandlerInfo {
 	if handler == nil {
-		log.Fatal("Handler must not be null")
+		core.Log.Fatal("Handler must not be null")
 	}
 	typ := core.GetType(handler)
 	if !core.IsFunc(typ) {
-		log.Fatal("Handler must be function")
+		core.Log.Fatal("Handler must be function")
 	}
 	handlerMethod := &RequestHandlerInfo{
 		HandlerFunc: handler,

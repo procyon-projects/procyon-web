@@ -24,14 +24,14 @@ func (err NoHandlerFoundError) Error() string {
 	return err.message
 }
 
-type NoHandlerParameterResolver struct {
+type NoHandlerParameterResolverError struct {
 	message string
 }
 
-func NewNoHandlerParameterResolver(message string) NoHandlerParameterResolver {
-	return NoHandlerParameterResolver{message}
+func NewNoHandlerParameterResolverError(message string) NoHandlerParameterResolverError {
+	return NoHandlerParameterResolverError{message}
 }
 
-func (err NoHandlerParameterResolver) Error() string {
+func (err NoHandlerParameterResolverError) Error() string {
 	return err.message
 }

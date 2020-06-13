@@ -78,9 +78,10 @@ func (router *SimpleRouter) DoDispatch(res HttpResponse, req HttpRequest) error 
 }
 
 func (router *SimpleRouter) GetHandlerChain(req HttpRequest) (*HandlerChain, error) {
-	if len(router.handlerMappings) > 0 {
-		for _, handlerMapping := range router.handlerMappings {
-			chain := handlerMapping.GetHandlerChain(req)
+	mappings := router.handlerMappings
+	if len(mappings) > 0 {
+		for _, mapping := range mappings {
+			chain := mapping.GetHandlerChain(req)
 			if chain != nil {
 				return chain, nil
 			}
@@ -90,10 +91,11 @@ func (router *SimpleRouter) GetHandlerChain(req HttpRequest) (*HandlerChain, err
 }
 
 func (router *SimpleRouter) GetHandlerAdapter(handler interface{}) (HandlerAdapter, error) {
-	if len(router.handlerAdapters) > 0 {
-		for _, handlerAdapter := range router.handlerAdapters {
-			if handlerAdapter.Supports(handler) {
-				return handlerAdapter, nil
+	adapters := router.handlerAdapters
+	if len(adapters) > 0 {
+		for _, adapter := range adapters {
+			if adapter.Supports(handler) {
+				return adapter, nil
 			}
 		}
 	}
