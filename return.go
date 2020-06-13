@@ -29,7 +29,7 @@ func (h *HandlerMethodReturnValueHandlers) SupportsReturnType(returnValueType Ha
 func (h *HandlerMethodReturnValueHandlers) HandleReturnValue(returnValues []interface{}, returnValueParameter HandlerMethodReturnValue, request HttpRequest) (interface{}, error) {
 	handler := h.findReturnValueHandler(returnValueParameter)
 	if handler == nil {
-		return nil, NewNoHandlerParameterResolver("Return value handler not found")
+		return nil, NewNoHandlerParameterResolverError("Return value handler not found")
 	}
 	return handler.HandleReturnValue(returnValues, returnValueParameter, request)
 }
