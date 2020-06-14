@@ -26,11 +26,11 @@ type RequestHandlerInfo struct {
 
 func NewHandlerInfo(handler RequestHandlerFunc, options ...RequestHandlerOption) *RequestHandlerInfo {
 	if handler == nil {
-		core.Log.Fatal("Handler must not be null")
+		panic("Handler must not be null")
 	}
 	typ := core.GetType(handler)
 	if !core.IsFunc(typ) {
-		core.Log.Fatal("Handler must be function")
+		panic("Handler must be function")
 	}
 	handlerMethod := &RequestHandlerInfo{
 		HandlerFunc: handler,

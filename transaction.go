@@ -21,7 +21,7 @@ func prepareTransactionContext(context context.ConfigurableApplicationContext) *
 	txContext := &TransactionContext{
 		context,
 		transactionalContext,
-		core.NewSimpleLogger(),
+		nil,
 	}
 	// configure logger
 	txContext.configureLogger()
@@ -37,6 +37,5 @@ func (ctx TransactionContext) GetLogger() core.Logger {
 }
 
 func (ctx TransactionContext) configureLogger() {
-	extensibleLoggerFormatter := core.NewSimpleExtensibleLogFormatter(ctx.GetAppId().String(), ctx.GetContextId().String())
-	ctx.logger.(*core.SimpleLogger).SetExtensibleLogFormatter(extensibleLoggerFormatter)
+
 }
