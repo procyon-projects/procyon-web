@@ -20,9 +20,9 @@ type SimpleRouter struct {
 	handlerAdapters []HandlerAdapter
 }
 
-func NewSimpleRouter() *SimpleRouter {
+func NewSimpleRouter(context ApplicationContext) *SimpleRouter {
 	return &SimpleRouter{
-		context:         nil,
+		context:         context,
 		handlerMappings: make([]HandlerMapping, 0),
 		handlerAdapters: make([]HandlerAdapter, 0),
 	}
@@ -53,8 +53,9 @@ func (router *SimpleRouter) processRequest(res HttpResponse, req HttpRequest) er
 }
 
 func (router *SimpleRouter) DoService(res HttpResponse, req HttpRequest) error {
+	txContext := prepareTransactionContext(router.context.(ConfigurableApplicationContext))
 	/* logging etc... */
-	req.AddAttribute(ApplicationContextAttribute, router.context)
+	req.AddAttribute(ApplicationContextAttribute, txContext)
 	_ = router.DoDispatch(res, req)
 	return nil
 }
