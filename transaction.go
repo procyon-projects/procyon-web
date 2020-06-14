@@ -14,7 +14,10 @@ type TransactionContext struct {
 }
 
 func prepareTransactionContext(context context.ConfigurableApplicationContext) *TransactionContext {
-	transactionalContext := tx.NewSimpleTransactionalContext(nil, nil)
+	transactionalContext, err := tx.NewSimpleTransactionalContext(nil, nil)
+	if err != nil {
+
+	}
 	txContext := &TransactionContext{
 		context,
 		transactionalContext,
