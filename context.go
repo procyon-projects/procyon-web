@@ -1,6 +1,7 @@
 package web
 
 import (
+	"github.com/google/uuid"
 	"github.com/procyon-projects/procyon-context"
 )
 
@@ -17,9 +18,9 @@ type GenericApplicationContext struct {
 	*context.GenericApplicationContext
 }
 
-func NewGenericApplicationContext(configurableContextAdapter context.ConfigurableContextAdapter) *GenericApplicationContext {
+func NewGenericApplicationContext(appId uuid.UUID, contextId uuid.UUID, configurableContextAdapter context.ConfigurableContextAdapter) *GenericApplicationContext {
 	return &GenericApplicationContext{
-		context.NewGenericApplicationContext(configurableContextAdapter),
+		context.NewGenericApplicationContext(appId, contextId, configurableContextAdapter),
 	}
 }
 
@@ -38,9 +39,9 @@ type ProcyonServerApplicationContext struct {
 	server Server
 }
 
-func NewProcyonServerApplicationContext() *ProcyonServerApplicationContext {
+func NewProcyonServerApplicationContext(appId uuid.UUID, contextId uuid.UUID) *ProcyonServerApplicationContext {
 	ctx := &ProcyonServerApplicationContext{}
-	genericCtx := NewGenericApplicationContext(ctx)
+	genericCtx := NewGenericApplicationContext(appId, contextId, ctx)
 	ctx.GenericApplicationContext = genericCtx
 	return ctx
 }
@@ -65,4 +66,8 @@ func (ctx *ProcyonServerApplicationContext) createWebServer() error {
 	}
 	ctx.server = server
 	return nil
+}
+
+func (ctx *ProcyonServerApplicationContext) cloneApplicationContext() {
+
 }
