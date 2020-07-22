@@ -59,31 +59,28 @@ func (router *SimpleRouter) DoService(res HttpResponse, req HttpRequest) error {
 
 	// clone the logger for transaction context
 	logger := mainContext.GetLogger()
-	contextId, err := uuid.NewUUID()
-	if err != nil {
-		logger.Panic(err)
-		return nil
-	}
-	transactionLogger := logger.Clone(contextId)
-
 	defer func() {
 		if r := recover(); r != nil {
-			transactionLogger.Panic(r)
+			logger.Panic(r)
 		}
 	}()
+
+	contextId, err := uuid.NewUUID()
+	if err != nil {
+		panic(err)
+	}
+	logger = logger.Clone(contextId)
 
 	var txContext *TransactionContext
 	txContext, err = prepareTransactionContext(contextId, router.context.(ConfigurableApplicationContext), logger)
 	if err != nil {
-		transactionLogger.Panic(err)
-		return nil
+		panic(err)
 	}
 	req.AddAttribute(ApplicationContextAttribute, txContext)
 
 	err = router.DoDispatch(res, req)
 	if err != nil {
-		transactionLogger.Panic(err)
-		return nil
+		panic(err)
 	}
 	return nil
 }
