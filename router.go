@@ -72,7 +72,7 @@ func (router *SimpleRouter) DoService(res HttpResponse, req HttpRequest) error {
 	}()
 
 	var txContext *TransactionContext
-	txContext, err = prepareTransactionContext(logger, router.context.(ConfigurableApplicationContext))
+	txContext, err = prepareTransactionContext(contextId, router.context.(ConfigurableApplicationContext), logger)
 	if err != nil {
 		transactionLogger.Panic(err)
 	}
