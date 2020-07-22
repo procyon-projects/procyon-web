@@ -62,6 +62,7 @@ func (router *SimpleRouter) DoService(res HttpResponse, req HttpRequest) error {
 	contextId, err := uuid.NewUUID()
 	if err != nil {
 		logger.Panic(err)
+		return nil
 	}
 	transactionLogger := logger.Clone(contextId)
 
@@ -75,12 +76,14 @@ func (router *SimpleRouter) DoService(res HttpResponse, req HttpRequest) error {
 	txContext, err = prepareTransactionContext(contextId, router.context.(ConfigurableApplicationContext), logger)
 	if err != nil {
 		transactionLogger.Panic(err)
+		return nil
 	}
 	req.AddAttribute(ApplicationContextAttribute, txContext)
 
 	err = router.DoDispatch(res, req)
 	if err != nil {
 		transactionLogger.Panic(err)
+		return nil
 	}
 	return nil
 }
