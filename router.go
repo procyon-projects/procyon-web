@@ -1,5 +1,7 @@
 package web
 
+import "github.com/google/uuid"
+
 type Router interface {
 	DoGet(res HttpResponse, req HttpRequest) error
 	DoPost(res HttpResponse, req HttpRequest) error
@@ -53,10 +55,33 @@ func (router *SimpleRouter) processRequest(res HttpResponse, req HttpRequest) er
 }
 
 func (router *SimpleRouter) DoService(res HttpResponse, req HttpRequest) error {
-	txContext := prepareTransactionContext(router.context.(ConfigurableApplicationContext))
-	/* logging etc... */
+	mainContext := router.context.(ConfigurableApplicationContext)
+
+	// clone the logger for transaction context
+	logger := mainContext.GetLogger()
+	contextId, err := uuid.NewUUID()
+	if err != nil {
+		logger.Panic(err)
+	}
+	transactionLogger := logger.Clone(contextId)
+
+	defer func() {
+		if r := recover(); r != nil {
+			transactionLogger.Panic(r)
+		}
+	}()
+
+	var txContext *TransactionContext
+	txContext, err = prepareTransactionContext(logger, router.context.(ConfigurableApplicationContext))
+	if err != nil {
+		transactionLogger.Panic(err)
+	}
 	req.AddAttribute(ApplicationContextAttribute, txContext)
-	_ = router.DoDispatch(res, req)
+
+	err = router.DoDispatch(res, req)
+	if err != nil {
+		transactionLogger.Panic(err)
+	}
 	return nil
 }
 

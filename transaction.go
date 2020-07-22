@@ -11,31 +11,30 @@ import (
 type TransactionContext struct {
 	context.ConfigurableApplicationContext
 	transactionalContext tx.TransactionalContext
-	logger               core.Logger
 }
 
-func prepareTransactionContext(context context.ConfigurableApplicationContext) *TransactionContext {
-	_, err := preparePeaFactoryForTransactionContext(context.GetPeaFactory())
+func prepareTransactionContext(contextId uuid.UUID,
+	context context.ConfigurableApplicationContext,
+	logger core.Logger) (*TransactionContext, error) {
+	peaFactory, err := clonePeaFactoryForTransactionContext(context.GetPeaFactory())
 	if err != nil {
-
+		return nil, err
 	}
+	_ = cloneApplicationContext(contextId, context, peaFactory, logger)
 	var transactionalContext tx.TransactionalContext
 	transactionalContext, err = tx.NewSimpleTransactionalContext(nil, nil)
 	if err != nil {
-
+		return nil, err
 	}
 	txContext := &TransactionContext{
 		context,
 		transactionalContext,
-		nil,
 	}
-	// configure logger
-	txContext.configureLogger()
-	return txContext
+	return txContext, nil
 }
 
-func preparePeaFactoryForTransactionContext(parent peas.ConfigurablePeaFactory) (peas.ConfigurablePeaFactory, error) {
-	peaFactory := parent.Clone().(peas.ConfigurablePeaFactory)
+func clonePeaFactoryForTransactionContext(parent peas.ConfigurablePeaFactory) (peas.ConfigurablePeaFactory, error) {
+	peaFactory := parent.ClonePeaFactory().(peas.ConfigurablePeaFactory)
 	peaFactory.SetParentPeaFactory(peaFactory)
 
 	/* register scopes */
@@ -47,14 +46,11 @@ func preparePeaFactoryForTransactionContext(parent peas.ConfigurablePeaFactory) 
 	return peaFactory, nil
 }
 
-func (ctx TransactionContext) GetContextId() uuid.UUID {
-	return ctx.transactionalContext.GetContextId()
-}
-
-func (ctx TransactionContext) GetLogger() core.Logger {
-	return ctx.logger
-}
-
-func (ctx TransactionContext) configureLogger() {
-
+func cloneApplicationContext(contextId uuid.UUID,
+	context context.ConfigurableApplicationContext,
+	peaFactory peas.ConfigurablePeaFactory,
+	logger core.Logger) context.ConfigurableContext {
+	cloneContext := context.CloneContext(contextId, peaFactory)
+	cloneContext.SetLogger(logger)
+	return cloneContext
 }
