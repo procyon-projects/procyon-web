@@ -1,6 +1,9 @@
 package web
 
-import "github.com/google/uuid"
+import (
+	"github.com/google/uuid"
+	"net/http"
+)
 
 type Router interface {
 	DoGet(res HttpResponse, req HttpRequest) error
@@ -62,6 +65,7 @@ func (router *SimpleRouter) DoService(res HttpResponse, req HttpRequest) error {
 	defer func() {
 		if r := recover(); r != nil {
 			logger.Panic(r)
+			http.Error(res.ResponseWriter, "", http.StatusInternalServerError)
 		}
 	}()
 
