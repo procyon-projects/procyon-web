@@ -27,8 +27,10 @@ func (server *DefaultWebServer) GetPort() int {
 }
 
 func (server *DefaultWebServer) ServeHTTP(response http.ResponseWriter, request *http.Request) {
-	req := newHttpRequest(request)
-	res := newHttpResponse(response)
+	req := getHttpRequestFromPool()
+	req.request = request
+	res := getHttpResponseFromPool()
+	res.responseWriter = response
 	switch request.Method {
 	case http.MethodGet:
 		_ = server.router.DoDelete(res, req)
@@ -41,6 +43,7 @@ func (server *DefaultWebServer) ServeHTTP(response http.ResponseWriter, request 
 	case http.MethodPatch:
 		_ = server.router.DoPatch(res, req)
 	}
+	putToPool(res, req)
 }
 
 func newWebServer(context ApplicationContext) (Server, error) {

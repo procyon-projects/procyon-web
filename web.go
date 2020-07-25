@@ -5,13 +5,12 @@ import (
 )
 
 type HttpRequest struct {
-	*http.Request
+	request    *http.Request
 	attributes map[string]interface{}
 }
 
-func newHttpRequest(req *http.Request) HttpRequest {
+func newHttpRequest() interface{} {
 	return HttpRequest{
-		Request:    req,
 		attributes: make(map[string]interface{}),
 	}
 }
@@ -21,11 +20,9 @@ func (req HttpRequest) AddAttribute(key string, value interface{}) {
 }
 
 type HttpResponse struct {
-	http.ResponseWriter
+	responseWriter http.ResponseWriter
 }
 
-func newHttpResponse(res http.ResponseWriter) HttpResponse {
-	return HttpResponse{
-		res,
-	}
+func newHttpResponse() interface{} {
+	return HttpResponse{}
 }

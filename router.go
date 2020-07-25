@@ -2,7 +2,6 @@ package web
 
 import (
 	"github.com/google/uuid"
-	"net/http"
 )
 
 type Router interface {
@@ -64,8 +63,8 @@ func (router *SimpleRouter) DoService(res HttpResponse, req HttpRequest) error {
 	logger := mainContext.GetLogger()
 	defer func() {
 		if r := recover(); r != nil {
+			putToPool(res, req)
 			logger.Panic(r)
-			http.Error(res.ResponseWriter, "", http.StatusInternalServerError)
 		}
 	}()
 
