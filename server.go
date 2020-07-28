@@ -1,7 +1,6 @@
 package web
 
 import (
-	core "github.com/procyon-projects/procyon-core"
 	"net/http"
 )
 
