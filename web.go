@@ -19,6 +19,12 @@ func (req HttpRequest) AddAttribute(key string, value interface{}) {
 	req.attributes[key] = value
 }
 
+func (req HttpRequest) clearAttributes() {
+	for key := range req.attributes {
+		delete(req.attributes, key)
+	}
+}
+
 type HttpResponse struct {
 	responseWriter http.ResponseWriter
 }

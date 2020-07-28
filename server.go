@@ -1,6 +1,7 @@
 package web
 
 import (
+	core "github.com/procyon-projects/procyon-core"
 	"net/http"
 )
 
@@ -27,9 +28,12 @@ func (server *DefaultWebServer) GetPort() int {
 }
 
 func (server *DefaultWebServer) ServeHTTP(response http.ResponseWriter, request *http.Request) {
-	req := getHttpRequestFromPool()
+	// if an instance of http request exist, get from pool
+	req := httpRequestPool.Get().(HttpRequest)
 	req.request = request
-	res := getHttpResponseFromPool()
+	req.clearAttributes()
+	// if an instance of http response exist, get from pool
+	res := httpResponsePool.Get().(HttpResponse)
 	res.responseWriter = response
 	switch request.Method {
 	case http.MethodGet:
@@ -43,7 +47,9 @@ func (server *DefaultWebServer) ServeHTTP(response http.ResponseWriter, request 
 	case http.MethodPatch:
 		_ = server.router.DoPatch(res, req)
 	}
-	putToPool(res, req)
+	// when you're done with the instances, put them into pool
+	httpRequestPool.Put(req)
+	httpResponsePool.Put(res)
 }
 
 func newWebServer(context ApplicationContext) (Server, error) {
