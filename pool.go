@@ -3,8 +3,9 @@ package web
 import "sync"
 
 var (
-	httpRequestPool  sync.Pool
-	httpResponsePool sync.Pool
+	httpRequestPool        sync.Pool
+	httpResponsePool       sync.Pool
+	transactionContextPool sync.Pool
 )
 
 func initHttpRequestPool() {
@@ -16,5 +17,11 @@ func initHttpRequestPool() {
 func initHttpResponsePool() {
 	httpResponsePool = sync.Pool{
 		New: newHttpResponse,
+	}
+}
+
+func initTransactionContextPool() {
+	transactionContextPool = sync.Pool{
+		New: newTransactionContext,
 	}
 }

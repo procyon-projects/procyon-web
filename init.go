@@ -6,6 +6,7 @@ func init() {
 	/* Initialize Pools */
 	initHttpRequestPool()
 	initHttpResponsePool()
+	initTransactionContextPool()
 	/* Handler Info Registry */
 	core.Register(NewSimpleHandlerInfoRegistry)
 }

@@ -61,6 +61,7 @@ func (router *SimpleRouter) processRequest(res HttpResponse, req HttpRequest) er
 
 func (router *SimpleRouter) DoService(res HttpResponse, req HttpRequest) error {
 	mainContext := router.context.(ConfigurableWebApplicationContext)
+	var txContext *TransactionContext
 
 	// clone the logger for transaction context
 	logger := mainContext.GetLogger()
@@ -70,6 +71,7 @@ func (router *SimpleRouter) DoService(res HttpResponse, req HttpRequest) error {
 			// when you're done with the instances, put them into pool
 			httpRequestPool.Put(req)
 			httpResponsePool.Put(res)
+			transactionContextPool.Put(txContext)
 			logger.Error(fmt.Sprintf("%s\n%s", r, string(debug.Stack())))
 		}
 	}()
@@ -80,7 +82,6 @@ func (router *SimpleRouter) DoService(res HttpResponse, req HttpRequest) error {
 	}
 	logger = logger.Clone(contextId)
 
-	var txContext *TransactionContext
 	txContext, err = prepareTransactionContext(contextId, router.context.(ConfigurableWebApplicationContext), logger)
 	if err != nil {
 		panic(err)
@@ -91,6 +92,8 @@ func (router *SimpleRouter) DoService(res HttpResponse, req HttpRequest) error {
 	if err != nil {
 		panic(err)
 	}
+	// when you're done with it, put tx context into pool
+	transactionContextPool.Put(txContext)
 	return nil
 }
 
