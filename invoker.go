@@ -35,7 +35,7 @@ func (handlerInvoker DefaultHandlerInvoker) InvokeHandler() error {
 }
 
 type HandlerInvokerProcessor interface {
-	PreProcess(ctx ConfigurableApplicationContext) (ConfigurableApplicationContext, error)
-	Process(ctx ConfigurableApplicationContext) (ConfigurableApplicationContext, error)
-	PostProcess(ctx ConfigurableApplicationContext) (ConfigurableApplicationContext, error)
+	PreProcess(ctx ConfigurableWebApplicationContext) (ConfigurableWebApplicationContext, error)
+	Process(ctx ConfigurableWebApplicationContext) (ConfigurableWebApplicationContext, error)
+	PostProcess(ctx ConfigurableWebApplicationContext) (ConfigurableWebApplicationContext, error)
 }

@@ -51,7 +51,7 @@ func (server *DefaultWebServer) ServeHTTP(response http.ResponseWriter, request 
 	httpResponsePool.Put(res)
 }
 
-func newWebServer(context ApplicationContext) (Server, error) {
+func newWebServer(context WebApplicationContext) (Server, error) {
 	return &DefaultWebServer{
 		router: NewSimpleRouter(context),
 	}, nil

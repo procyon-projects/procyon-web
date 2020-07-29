@@ -19,12 +19,12 @@ type Router interface {
 const ApplicationContextAttribute = "SIMPLE_ROUTER_WEB_CONTEXT"
 
 type SimpleRouter struct {
-	context         ApplicationContext
+	context         WebApplicationContext
 	handlerMappings []HandlerMapping
 	handlerAdapters []HandlerAdapter
 }
 
-func NewSimpleRouter(context ApplicationContext) *SimpleRouter {
+func NewSimpleRouter(context WebApplicationContext) *SimpleRouter {
 	return &SimpleRouter{
 		context:         context,
 		handlerMappings: make([]HandlerMapping, 0),
@@ -57,7 +57,7 @@ func (router *SimpleRouter) processRequest(res HttpResponse, req HttpRequest) er
 }
 
 func (router *SimpleRouter) DoService(res HttpResponse, req HttpRequest) error {
-	mainContext := router.context.(ConfigurableApplicationContext)
+	mainContext := router.context.(ConfigurableWebApplicationContext)
 
 	// clone the logger for transaction context
 	logger := mainContext.GetLogger()
@@ -77,7 +77,7 @@ func (router *SimpleRouter) DoService(res HttpResponse, req HttpRequest) error {
 	logger = logger.Clone(contextId)
 
 	var txContext *TransactionContext
-	txContext, err = prepareTransactionContext(contextId, router.context.(ConfigurableApplicationContext), logger)
+	txContext, err = prepareTransactionContext(contextId, router.context.(ConfigurableWebApplicationContext), logger)
 	if err != nil {
 		panic(err)
 	}

@@ -5,22 +5,22 @@ import (
 	"github.com/procyon-projects/procyon-context"
 )
 
-type ApplicationContext interface {
+type WebApplicationContext interface {
 	context.ApplicationContext
 }
 
-type ConfigurableApplicationContext interface {
-	ApplicationContext
+type ConfigurableWebApplicationContext interface {
+	WebApplicationContext
 	context.ConfigurableContext
 }
 
-type GenericApplicationContext struct {
-	*context.GenericApplicationContext
+type BaseWebApplicationContext struct {
+	*context.BaseApplicationContext
 }
 
-func NewGenericApplicationContext(appId uuid.UUID, contextId uuid.UUID, configurableContextAdapter context.ConfigurableContextAdapter) *GenericApplicationContext {
-	return &GenericApplicationContext{
-		context.NewGenericApplicationContext(appId, contextId, configurableContextAdapter),
+func NewBaseWebApplicationContext(appId uuid.UUID, contextId uuid.UUID, configurableContextAdapter context.ConfigurableContextAdapter) *BaseWebApplicationContext {
+	return &BaseWebApplicationContext{
+		context.NewBaseApplicationContext(appId, contextId, configurableContextAdapter),
 	}
 }
 
@@ -35,14 +35,14 @@ type ConfigurableServerApplicationContext interface {
 }
 
 type ProcyonServerApplicationContext struct {
-	*GenericApplicationContext
+	*BaseWebApplicationContext
 	server Server
 }
 
 func NewProcyonServerApplicationContext(appId uuid.UUID, contextId uuid.UUID) *ProcyonServerApplicationContext {
 	ctx := &ProcyonServerApplicationContext{}
-	genericCtx := NewGenericApplicationContext(appId, contextId, ctx)
-	ctx.GenericApplicationContext = genericCtx
+	genericCtx := NewBaseWebApplicationContext(appId, contextId, ctx)
+	ctx.BaseWebApplicationContext = genericCtx
 	return ctx
 }
 
@@ -51,7 +51,7 @@ func (ctx *ProcyonServerApplicationContext) GetWebServer() Server {
 }
 
 func (ctx *ProcyonServerApplicationContext) Configure() {
-	ctx.GenericApplicationContext.GenericApplicationContext.Configure()
+	ctx.BaseWebApplicationContext.BaseApplicationContext.Configure()
 }
 
 func (ctx *ProcyonServerApplicationContext) OnConfigure() {
@@ -60,7 +60,7 @@ func (ctx *ProcyonServerApplicationContext) OnConfigure() {
 }
 
 func (ctx *ProcyonServerApplicationContext) createWebServer() error {
-	server, err := newWebServer(ctx.GenericApplicationContext)
+	server, err := newWebServer(ctx.BaseWebApplicationContext)
 	if err != nil {
 		return err
 	}
