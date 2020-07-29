@@ -69,6 +69,7 @@ func (router *SimpleRouter) DoService(res HttpResponse, req HttpRequest) error {
 			httpRequestPool.Put(req)
 			httpResponsePool.Put(res)
 			logger.Error(r)
+			panic(r)
 		}
 	}()
 
