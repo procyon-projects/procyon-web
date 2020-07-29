@@ -1,8 +1,10 @@
 package web
 
 import (
+	"fmt"
 	"github.com/google/uuid"
 	"net/http"
+	"runtime/debug"
 )
 
 type Router interface {
@@ -68,8 +70,7 @@ func (router *SimpleRouter) DoService(res HttpResponse, req HttpRequest) error {
 			// when you're done with the instances, put them into pool
 			httpRequestPool.Put(req)
 			httpResponsePool.Put(res)
-			logger.Error(r)
-			panic(r)
+			logger.Error(fmt.Sprintf("%s\n%s", r, string(debug.Stack())))
 		}
 	}()
 
