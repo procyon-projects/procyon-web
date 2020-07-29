@@ -68,7 +68,7 @@ func (router *SimpleRouter) DoService(res HttpResponse, req HttpRequest) error {
 			// when you're done with the instances, put them into pool
 			httpRequestPool.Put(req)
 			httpResponsePool.Put(res)
-			logger.Panic(r)
+			logger.Error(r)
 		}
 	}()
 
