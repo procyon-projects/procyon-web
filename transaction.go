@@ -38,24 +38,11 @@ func clonePeaFactoryForTransactionContext(parent peas.ConfigurablePeaFactory) (p
 	peaFactory.SetParentPeaFactory(peaFactory)
 
 	/* register scopes */
-	requestScope := NewAppRequestScope()
-	err := peaFactory.RegisterScope(RequestScope, requestScope)
+	err := peaFactory.RegisterScope(RequestScope, NewAppRequestScope())
 	if err != nil {
 		return nil, err
 	}
-	/* register controller types to scope */
-	err = peaFactory.RegisterTypeToScope(core.GetType((*Controller)(nil)), requestScope)
-	if err != nil {
-		return nil, err
-	}
-	err = peaFactory.RegisterTypeToScope(core.GetType((*context.Repository)(nil)), requestScope)
-	if err != nil {
-		return nil, err
-	}
-	err = peaFactory.RegisterTypeToScope(core.GetType((*context.Service)(nil)), requestScope)
-	if err != nil {
-		return nil, err
-	}
+
 	return peaFactory, nil
 }
 
