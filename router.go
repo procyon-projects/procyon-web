@@ -2,6 +2,7 @@ package web
 
 import (
 	"github.com/google/uuid"
+	"net/http"
 )
 
 type Router interface {
@@ -63,6 +64,7 @@ func (router *SimpleRouter) DoService(res HttpResponse, req HttpRequest) error {
 	logger := mainContext.GetLogger()
 	defer func() {
 		if r := recover(); r != nil {
+			res.responseWriter.WriteHeader(http.StatusBadRequest)
 			// when you're done with the instances, put them into pool
 			httpRequestPool.Put(req)
 			httpResponsePool.Put(res)
