@@ -15,6 +15,10 @@ func newHttpRequest() interface{} {
 	}
 }
 
+func (req HttpRequest) GetMethod() string {
+	return req.request.Method
+}
+
 func (req HttpRequest) AddAttribute(key string, value interface{}) {
 	req.attributes[key] = value
 }

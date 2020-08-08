@@ -6,25 +6,48 @@ import (
 )
 
 type RequestHandlerFunc = interface{}
-type RequestHandlerOption func(handler *RequestHandlerInfo)
+type RequestHandlerOption func(handler *RequestHandler)
 
-type HttpMethod string
+type RequestMethod string
 
 const (
-	HttpMethodGet    HttpMethod = http.MethodGet
-	HttpMethodPost   HttpMethod = http.MethodPost
-	HttpMethodPut    HttpMethod = http.MethodPut
-	HttpMethodDelete HttpMethod = http.MethodDelete
-	HttpMethodPatch  HttpMethod = http.MethodPatch
+	unknownMethod        RequestMethod = "[unknown-method]"
+	RequestMethodGet     RequestMethod = http.MethodGet
+	RequestMethodPost    RequestMethod = http.MethodPost
+	RequestMethodPut     RequestMethod = http.MethodPut
+	RequestMethodDelete  RequestMethod = http.MethodDelete
+	RequestMethodPatch   RequestMethod = http.MethodPatch
+	RequestMethodOptions RequestMethod = http.MethodOptions
+	RequestMethodHead    RequestMethod = http.MethodHead
 )
 
-type RequestHandlerInfo struct {
+func GetRequestMethod(method string) RequestMethod {
+	switch method {
+	case http.MethodGet:
+		return RequestMethodGet
+	case http.MethodPost:
+		return RequestMethodPost
+	case http.MethodPut:
+		return RequestMethodPut
+	case http.MethodDelete:
+		return RequestMethodDelete
+	case http.MethodPatch:
+		return RequestMethodPatch
+	case http.MethodOptions:
+		return RequestMethodOptions
+	case http.MethodHead:
+		return RequestMethodHead
+	}
+	return unknownMethod
+}
+
+type RequestHandler struct {
 	Paths       []string
-	Methods     []HttpMethod
+	Methods     []RequestMethod
 	HandlerFunc RequestHandlerFunc
 }
 
-func NewHandlerInfo(handler RequestHandlerFunc, options ...RequestHandlerOption) *RequestHandlerInfo {
+func NewHandler(handler RequestHandlerFunc, options ...RequestHandlerOption) *RequestHandler {
 	if handler == nil {
 		panic("Handler must not be null")
 	}
@@ -32,62 +55,70 @@ func NewHandlerInfo(handler RequestHandlerFunc, options ...RequestHandlerOption)
 	if !core.IsFunc(typ) {
 		panic("Handler must be function")
 	}
-	handlerMethod := &RequestHandlerInfo{
+	handlerMethod := &RequestHandler{
 		HandlerFunc: handler,
 	}
 	for _, option := range options {
 		option(handlerMethod)
 	}
 	if len(handlerMethod.Methods) == 0 {
-		handlerMethod.Methods = []HttpMethod{HttpMethodGet}
+		handlerMethod.Methods = []RequestMethod{RequestMethodGet}
 	}
 	return handlerMethod
 }
 
 func WithPath(paths ...string) RequestHandlerOption {
-	return func(handler *RequestHandlerInfo) {
+	return func(handler *RequestHandler) {
 		handler.Paths = paths
 	}
 }
 
-func WithMethod(methods ...HttpMethod) RequestHandlerOption {
-	return func(handler *RequestHandlerInfo) {
+func WithMethod(methods ...RequestMethod) RequestHandlerOption {
+	return func(handler *RequestHandler) {
 		if len(methods) > 0 {
 			handler.Methods = methods
 		} else {
-			handler.Methods = []HttpMethod{HttpMethodGet}
+			handler.Methods = []RequestMethod{RequestMethodGet}
 		}
 	}
 }
 
-type HandlerInfoRegistry interface {
-	Register(info ...*RequestHandlerInfo)
-	RegisterGroup(prefix string, info ...*RequestHandlerInfo)
+type HandlerRegistry interface {
+	Register(info ...*RequestHandler)
+	RegisterGroup(prefix string, info ...*RequestHandler)
 }
 
-type SimpleHandlerInfoRegistry struct {
-	infoRegistryMap map[string][]*RequestHandlerInfo
+type SimpleHandlerRegistry struct {
+	registryMap map[string][]*RequestHandler
 }
 
-func NewSimpleHandlerInfoRegistry() *SimpleHandlerInfoRegistry {
-	return &SimpleHandlerInfoRegistry{
-		infoRegistryMap: make(map[string][]*RequestHandlerInfo),
+func newSimpleHandlerRegistry() *SimpleHandlerRegistry {
+	return &SimpleHandlerRegistry{
+		registryMap: make(map[string][]*RequestHandler),
 	}
 }
 
-func (registry *SimpleHandlerInfoRegistry) Register(info ...*RequestHandlerInfo) {
+func (registry *SimpleHandlerRegistry) Register(info ...*RequestHandler) {
 	registry.RegisterGroup("<nil>", info...)
 }
 
-func (registry *SimpleHandlerInfoRegistry) RegisterGroup(prefix string, info ...*RequestHandlerInfo) {
+func (registry *SimpleHandlerRegistry) RegisterGroup(prefix string, info ...*RequestHandler) {
 	if len(info) == 0 {
 		return
 	}
 	if prefix == "" {
 		prefix = "<nil>"
 	}
-	if registry.infoRegistryMap[prefix] == nil {
-		registry.infoRegistryMap[prefix] = make([]*RequestHandlerInfo, 0)
+	if registry.registryMap[prefix] == nil {
+		registry.registryMap[prefix] = make([]*RequestHandler, 0)
 	}
-	registry.infoRegistryMap[prefix] = append(registry.infoRegistryMap[prefix], info...)
+	registry.registryMap[prefix] = append(registry.registryMap[prefix], info...)
+}
+
+func (registry *SimpleHandlerRegistry) clear() {
+	registry.registryMap = make(map[string][]*RequestHandler)
+}
+
+func (registry *SimpleHandlerRegistry) getRegistryMap() map[string][]*RequestHandler {
+	return registry.registryMap
 }
