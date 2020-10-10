@@ -6,6 +6,7 @@ var (
 	httpRequestPool           sync.Pool
 	httpResponsePool          sync.Pool
 	webTransactionContextPool sync.Pool
+	applicationContextPool    sync.Pool
 )
 
 func initHttpRequestPool() {
@@ -23,5 +24,11 @@ func initHttpResponsePool() {
 func initWebTransactionContextPool() {
 	webTransactionContextPool = sync.Pool{
 		New: newWebTransactionContext,
+	}
+}
+
+func initApplicationContextPool() {
+	webTransactionContextPool = sync.Pool{
+		New: newApplicationContext,
 	}
 }

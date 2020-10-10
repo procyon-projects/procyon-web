@@ -6,6 +6,10 @@ import (
 	peas "github.com/procyon-projects/procyon-peas"
 )
 
+func newApplicationContext() interface{} {
+	return &context.BaseApplicationContext{}
+}
+
 func newWebTransactionContext() interface{} {
 	return &BaseWebApplicationContext{}
 }
@@ -36,9 +40,13 @@ func clonePeaFactory(parent peas.ConfigurablePeaFactory) (peas.ConfigurablePeaFa
 func cloneWebTransactionContext(contextId uuid.UUID,
 	ctx context.ConfigurableContext,
 	peaFactory peas.ConfigurablePeaFactory) context.Context {
-	newContext := webTransactionContextPool.Get().(*BaseWebApplicationContext)
-	newContext.BaseApplicationContext = ctx.(*context.BaseApplicationContext)
-	newContext.SetParentPeaFactory(peaFactory)
-	ctx.Copy(newContext, contextId)
-	return newContext
+
+	newAppContext := applicationContextPool.Get().(*context.BaseApplicationContext)
+	newAppContext.SetParentPeaFactory(peaFactory)
+	ctx.Copy(newAppContext, contextId)
+
+	newWebContext := webTransactionContextPool.Get().(*BaseWebApplicationContext)
+	newWebContext.BaseApplicationContext = newAppContext
+
+	return newWebContext
 }

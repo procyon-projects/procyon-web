@@ -6,6 +6,7 @@ func init() {
 	/* Initialize Pools */
 	initHttpRequestPool()
 	initHttpResponsePool()
+	initApplicationContextPool()
 	initWebTransactionContextPool()
 	/* Request Handler Mapping */
 	core.Register(NewRequestHandlerMapping)
