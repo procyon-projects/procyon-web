@@ -11,13 +11,12 @@ func newWebTransactionContext() interface{} {
 }
 
 func prepareWebTransactionContext(contextId uuid.UUID,
-	configurableContext context.ConfigurableContext,
-	logger context.Logger) (context.Context, error) {
+	configurableContext context.ConfigurableContext) (context.Context, error) {
 	peaFactory, err := clonePeaFactory(configurableContext.GetPeaFactory())
 	if err != nil {
 		return nil, err
 	}
-	cloneContext := cloneWebTransactionContext(contextId, configurableContext, peaFactory, logger)
+	cloneContext := cloneWebTransactionContext(contextId, configurableContext, peaFactory)
 	return cloneContext, nil
 }
 
@@ -35,12 +34,11 @@ func clonePeaFactory(parent peas.ConfigurablePeaFactory) (peas.ConfigurablePeaFa
 }
 
 func cloneWebTransactionContext(contextId uuid.UUID,
-	context context.ConfigurableContext,
-	peaFactory peas.ConfigurablePeaFactory,
-	logger context.Logger) context.Context {
+	ctx context.ConfigurableContext,
+	peaFactory peas.ConfigurablePeaFactory) context.Context {
 	newContext := webTransactionContextPool.Get().(*BaseWebApplicationContext)
-	newContext.SetLogger(logger)
+	newContext.BaseApplicationContext = ctx.(*context.BaseApplicationContext)
 	newContext.SetParentPeaFactory(peaFactory)
-	context.Copy(newContext, contextId)
+	ctx.Copy(newContext, contextId)
 	return newContext
 }

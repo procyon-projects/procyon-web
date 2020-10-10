@@ -84,7 +84,6 @@ func (router *SimpleRouter) DoService(res HttpResponse, req HttpRequest) error {
 
 	transactionContext, err = prepareWebTransactionContext(contextId,
 		router.context.(context.ConfigurableContext),
-		logger,
 	)
 	if err != nil {
 		panic(err)
