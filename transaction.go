@@ -4,7 +4,6 @@ import (
 	"errors"
 	"github.com/google/uuid"
 	context "github.com/procyon-projects/procyon-context"
-	core "github.com/procyon-projects/procyon-core"
 	peas "github.com/procyon-projects/procyon-peas"
 	tx "github.com/procyon-projects/procyon-tx"
 )
@@ -20,7 +19,7 @@ func newTransactionContext() interface{} {
 
 func prepareTransactionContext(contextId uuid.UUID,
 	configurableContext context.ConfigurableApplicationContext,
-	logger core.Logger) (*TransactionContext, error) {
+	logger context.Logger) (*TransactionContext, error) {
 	peaFactory, err := clonePeaFactoryForTransactionContext(configurableContext.GetPeaFactory())
 	if err != nil {
 		return nil, err
@@ -58,7 +57,7 @@ func clonePeaFactoryForTransactionContext(parent peas.ConfigurablePeaFactory) (p
 func cloneApplicationContext(contextId uuid.UUID,
 	context context.ConfigurableApplicationContext,
 	peaFactory peas.ConfigurablePeaFactory,
-	logger core.Logger) interface{} {
+	logger context.Logger) interface{} {
 	cloneContext := context.CloneContext(contextId, peaFactory)
 	cloneContext.SetLogger(logger)
 	return cloneContext

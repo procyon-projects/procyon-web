@@ -3,8 +3,6 @@ package web
 import (
 	"fmt"
 	"github.com/google/uuid"
-	core "github.com/procyon-projects/procyon-core"
-	tx "github.com/procyon-projects/procyon-tx"
 	"net/http"
 	"runtime/debug"
 )
@@ -73,17 +71,13 @@ func (router *SimpleRouter) DoService(res HttpResponse, req HttpRequest) error {
 			// when you're done with the instances, put them into pool
 			httpRequestPool.Put(req)
 			httpResponsePool.Put(res)
+
 			// transactional context
-			if txContext, ok := txContext.TransactionalContext.(*tx.SimpleTransactionalContext); ok {
-				txContext.PutToPool()
-			}
-			transactionContextPool.Put(txContext)
+			//if txContext, ok := txContext.TransactionalContext.(*tx.SimpleTransactionalContext); ok {
+			//	txContext.PutToPool()
+			//}
 
-			logger.Error(fmt.Sprintf("%s\n%s", r, string(debug.Stack())))
-
-			if proxyLogger, ok := logger.(*core.ProxyLogger); ok {
-				proxyLogger.PutToPool()
-			}
+			logger.Error(txContext, fmt.Sprintf("%s\n%s", r, string(debug.Stack())))
 		}
 	}()
 
@@ -91,7 +85,6 @@ func (router *SimpleRouter) DoService(res HttpResponse, req HttpRequest) error {
 	if err != nil {
 		panic(err)
 	}
-	logger = logger.Clone(contextId)
 
 	txContext, err = prepareTransactionContext(contextId, router.context.(ConfigurableWebApplicationContext), logger)
 	if err != nil {
@@ -103,17 +96,6 @@ func (router *SimpleRouter) DoService(res HttpResponse, req HttpRequest) error {
 	if err != nil {
 		panic(err)
 	}
-	// when you're done with it, put tx context into pool
-	if txContext, ok := txContext.TransactionalContext.(*tx.SimpleTransactionalContext); ok {
-		txContext.PutToPool()
-	}
-	transactionContextPool.Put(txContext)
-
-	if proxyLogger, ok := logger.(*core.ProxyLogger); ok {
-		proxyLogger.PutToPool()
-	}
-	transactionContextPool.Put(txContext)
-
 	return nil
 }
 
