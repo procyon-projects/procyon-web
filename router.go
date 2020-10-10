@@ -3,6 +3,7 @@ package web
 import (
 	"fmt"
 	"github.com/google/uuid"
+	context "github.com/procyon-projects/procyon-context"
 	"net/http"
 	"runtime/debug"
 )
@@ -19,7 +20,7 @@ type Router interface {
 	GetHandlerAdapter(handler interface{}) (HandlerAdapter, error)
 }
 
-const ApplicationContextAttribute = "SIMPLE_ROUTER_WEB_CONTEXT"
+const ApplicationContextAttribute = "WEB_APPLICATION_CONTEXT"
 
 type SimpleRouter struct {
 	context         WebApplicationContext
@@ -61,7 +62,7 @@ func (router *SimpleRouter) processRequest(res HttpResponse, req HttpRequest) er
 
 func (router *SimpleRouter) DoService(res HttpResponse, req HttpRequest) error {
 	mainContext := router.context.(ConfigurableWebApplicationContext)
-	var txContext *TransactionContext
+	var transactionContext context.Context
 
 	// clone the logger for transaction context
 	logger := mainContext.GetLogger()
@@ -71,13 +72,8 @@ func (router *SimpleRouter) DoService(res HttpResponse, req HttpRequest) error {
 			// when you're done with the instances, put them into pool
 			httpRequestPool.Put(req)
 			httpResponsePool.Put(res)
-
-			// transactional context
-			//if txContext, ok := txContext.TransactionalContext.(*tx.SimpleTransactionalContext); ok {
-			//	txContext.PutToPool()
-			//}
-
-			logger.Error(txContext, fmt.Sprintf("%s\n%s", r, string(debug.Stack())))
+			webTransactionContextPool.Put(transactionContext)
+			logger.Error(transactionContext, fmt.Sprintf("%s\n%s", r, string(debug.Stack())))
 		}
 	}()
 
@@ -86,11 +82,14 @@ func (router *SimpleRouter) DoService(res HttpResponse, req HttpRequest) error {
 		panic(err)
 	}
 
-	txContext, err = prepareTransactionContext(contextId, router.context.(ConfigurableWebApplicationContext), logger)
+	transactionContext, err = prepareWebTransactionContext(contextId,
+		router.context.(context.ConfigurableContext),
+		logger,
+	)
 	if err != nil {
 		panic(err)
 	}
-	req.AddAttribute(ApplicationContextAttribute, txContext)
+	req.AddAttribute(ApplicationContextAttribute, transactionContext)
 
 	err = router.DoDispatch(res, req)
 	if err != nil {

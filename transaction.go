@@ -1,47 +1,27 @@
 package web
 
 import (
-	"errors"
 	"github.com/google/uuid"
 	context "github.com/procyon-projects/procyon-context"
 	peas "github.com/procyon-projects/procyon-peas"
-	tx "github.com/procyon-projects/procyon-tx"
 )
 
-type TransactionContext struct {
-	context.ConfigurableApplicationContext
-	tx.TransactionalContext
+func newWebTransactionContext() interface{} {
+	return &BaseWebApplicationContext{}
 }
 
-func newTransactionContext() interface{} {
-	return &TransactionContext{}
-}
-
-func prepareTransactionContext(contextId uuid.UUID,
-	configurableContext context.ConfigurableApplicationContext,
-	logger context.Logger) (*TransactionContext, error) {
-	peaFactory, err := clonePeaFactoryForTransactionContext(configurableContext.GetPeaFactory())
+func prepareWebTransactionContext(contextId uuid.UUID,
+	configurableContext context.ConfigurableContext,
+	logger context.Logger) (context.Context, error) {
+	peaFactory, err := clonePeaFactory(configurableContext.GetPeaFactory())
 	if err != nil {
 		return nil, err
 	}
-	cloneContext := cloneApplicationContext(contextId, configurableContext, peaFactory, logger)
-	var transactionalContext tx.TransactionalContext
-	transactionalContext, err = nil, nil //tx.NewSimpleTransactionalContext(contextId, logger, nil, nil)
-	if err != nil {
-		return nil, err
-	}
-	txContext := transactionContextPool.Get().(*TransactionContext)
-	if ctx, ok := cloneContext.(context.ConfigurableApplicationContext); ok {
-		txContext.ConfigurableApplicationContext = ctx
-		txContext.TransactionalContext = transactionalContext
-	} else {
-		transactionContextPool.Put(txContext)
-		return nil, errors.New("context.ConfigurableApplicationContext methods must be implemented in your context struct")
-	}
-	return txContext, nil
+	cloneContext := cloneWebTransactionContext(contextId, configurableContext, peaFactory, logger)
+	return cloneContext, nil
 }
 
-func clonePeaFactoryForTransactionContext(parent peas.ConfigurablePeaFactory) (peas.ConfigurablePeaFactory, error) {
+func clonePeaFactory(parent peas.ConfigurablePeaFactory) (peas.ConfigurablePeaFactory, error) {
 	peaFactory := parent.ClonePeaFactory().(peas.ConfigurablePeaFactory)
 	peaFactory.SetParentPeaFactory(peaFactory)
 
@@ -54,11 +34,13 @@ func clonePeaFactoryForTransactionContext(parent peas.ConfigurablePeaFactory) (p
 	return peaFactory, nil
 }
 
-func cloneApplicationContext(contextId uuid.UUID,
-	context context.ConfigurableApplicationContext,
+func cloneWebTransactionContext(contextId uuid.UUID,
+	context context.ConfigurableContext,
 	peaFactory peas.ConfigurablePeaFactory,
-	logger context.Logger) interface{} {
-	cloneContext := context.CloneContext(contextId, peaFactory)
-	cloneContext.SetLogger(logger)
-	return cloneContext
+	logger context.Logger) context.Context {
+	newContext := webTransactionContextPool.Get().(*BaseWebApplicationContext)
+	newContext.SetLogger(logger)
+	newContext.SetParentPeaFactory(peaFactory)
+	context.Copy(newContext, contextId)
+	return newContext
 }
