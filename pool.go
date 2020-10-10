@@ -28,7 +28,7 @@ func initWebTransactionContextPool() {
 }
 
 func initApplicationContextPool() {
-	webTransactionContextPool = sync.Pool{
+	applicationContextPool = sync.Pool{
 		New: newApplicationContext,
 	}
 }
