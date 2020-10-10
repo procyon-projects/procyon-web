@@ -42,7 +42,8 @@ func cloneWebTransactionContext(contextId uuid.UUID,
 	peaFactory peas.ConfigurablePeaFactory) context.Context {
 
 	newAppContext := applicationContextPool.Get().(*context.BaseApplicationContext)
-	newAppContext.SetParentPeaFactory(peaFactory)
+	newAppContext.ConfigurableContextAdapter = ctx.(*BaseWebApplicationContext).ConfigurableContextAdapter
+	newAppContext.ConfigurablePeaFactory = peaFactory
 	ctx.Copy(newAppContext, contextId)
 
 	newWebContext := webTransactionContextPool.Get().(*BaseWebApplicationContext)
