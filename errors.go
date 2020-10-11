@@ -1,5 +1,40 @@
 package web
 
+import core "github.com/procyon-projects/procyon-core"
+
+type ErrorHandlerFunc interface{}
+
+type ErrorHandler struct {
+	HandlerFunc ErrorHandlerFunc
+	Errors      []error
+}
+
+func NewErrorHandler(handler ErrorHandlerFunc, errors ...error) ErrorHandler {
+	if handler == nil {
+		panic("Handler must not be null")
+	}
+	if errors == nil {
+		panic("Error(s) must not be null")
+	}
+	typ := core.GetType(handler)
+	if !core.IsFunc(typ) {
+		panic("Handler must be function")
+	}
+	handlerMethod := ErrorHandler{
+		HandlerFunc: handler,
+		Errors:      errors,
+	}
+	return handlerMethod
+}
+
+type ErrorHandlerRegistry interface {
+	Register(handler ErrorHandler)
+}
+
+type ErrorHandlerAdvice interface {
+	RegisterErrorHandlers(registry ErrorHandlerRegistry)
+}
+
 type RouterError struct {
 	message string
 }
