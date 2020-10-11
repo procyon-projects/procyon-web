@@ -31,7 +31,7 @@ type ErrorHandlerRegistry interface {
 	Register(handler ErrorHandler)
 }
 
-type ErrorHandlerAdvice interface {
+type ErrorHandlerAdviser interface {
 	RegisterErrorHandlers(registry ErrorHandlerRegistry)
 }
 
