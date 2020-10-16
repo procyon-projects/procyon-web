@@ -1,6 +1,8 @@
 package web
 
-import core "github.com/procyon-projects/procyon-core"
+import (
+	"github.com/codnect/goo"
+)
 
 type ErrorHandlerFunc interface{}
 
@@ -16,8 +18,8 @@ func NewErrorHandler(handler ErrorHandlerFunc, errors ...error) ErrorHandler {
 	if errors == nil {
 		panic("Error(s) must not be null")
 	}
-	typ := core.GetType(handler)
-	if !core.IsFunc(typ) {
+	typ := goo.GetType(handler)
+	if !typ.IsFunction() {
 		panic("Handler must be function")
 	}
 	handlerMethod := ErrorHandler{

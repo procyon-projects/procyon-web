@@ -9,7 +9,7 @@ type HandlerMapping interface {
 	GetHandlerChain(req HttpRequest) *HandlerChain
 }
 
-type mappingRegistry interface {
+type MappingRegistry interface {
 	Register(mapping string, handler interface{}, fun interface{}) error
 	GetMappings() map[string]HandlerMethod
 	FindMappingByUrl(path string) (string, error)
@@ -52,7 +52,7 @@ func (registry defaultMappingRegistry) FindMappingByUrl(path string) (string, er
 }
 
 type RequestHandlerMapping struct {
-	mappingRegistry mappingRegistry
+	mappingRegistry MappingRegistry
 }
 
 func NewRequestHandlerMapping() RequestHandlerMapping {

@@ -1,6 +1,8 @@
 package web
 
-import core "github.com/procyon-projects/procyon-core"
+import (
+	"github.com/codnect/goo"
+)
 
 type HandlerMethodReturnValueHandler interface {
 	SupportsReturnType(returnValueType HandlerMethodReturnValue) bool
@@ -55,7 +57,7 @@ func NewResponseEntityReturnValueHandler() ResponseEntityReturnValueHandler {
 }
 
 func (h ResponseEntityReturnValueHandler) SupportsReturnType(returnValueType HandlerMethodReturnValue) bool {
-	if returnValueType.GetType().Typ == core.GetType((*ResponseEntity)(nil)).Typ {
+	if returnValueType.GetType().Equals(goo.GetType((*ResponseEntity)(nil))) {
 		return true
 	}
 	return false
@@ -74,7 +76,7 @@ func NewErrorReturnValueHandler() ErrorReturnValueHandler {
 }
 
 func (h ErrorReturnValueHandler) SupportsReturnType(returnValueType HandlerMethodReturnValue) bool {
-	if returnValueType.GetType().Typ == core.GetType((error)(nil)).Typ {
+	if returnValueType.GetType().Equals(goo.GetType((error)(nil))) {
 		return true
 	}
 	return false

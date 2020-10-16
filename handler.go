@@ -1,6 +1,8 @@
 package web
 
-import core "github.com/procyon-projects/procyon-core"
+import (
+	"github.com/codnect/goo"
+)
 
 type HandlerMethod struct {
 	parameters   []HandlerMethodParameter
@@ -31,30 +33,30 @@ func (m HandlerMethod) GetReturnValues() []HandlerMethodReturnValue {
 }
 
 type HandlerMethodParameter struct {
-	typ *core.Type
+	typ goo.Type
 }
 
-func NewHandlerMethodParameter(typ *core.Type) HandlerMethodParameter {
+func NewHandlerMethodParameter(typ goo.Type) HandlerMethodParameter {
 	return HandlerMethodParameter{
 		typ,
 	}
 }
 
-func (r HandlerMethodParameter) GetType() *core.Type {
+func (r HandlerMethodParameter) GetType() goo.Type {
 	return r.typ
 }
 
 type HandlerMethodReturnValue struct {
-	typ *core.Type
+	typ goo.Type
 }
 
-func NewHandlerMethodReturnValue(typ *core.Type) HandlerMethodReturnValue {
+func NewHandlerMethodReturnValue(typ goo.Type) HandlerMethodReturnValue {
 	return HandlerMethodReturnValue{
 		typ,
 	}
 }
 
-func (r HandlerMethodReturnValue) GetType() *core.Type {
+func (r HandlerMethodReturnValue) GetType() goo.Type {
 	return r.typ
 }
 

@@ -1,7 +1,7 @@
 package web
 
 import (
-	core "github.com/procyon-projects/procyon-core"
+	"github.com/codnect/goo"
 	"net/http"
 )
 
@@ -51,8 +51,8 @@ func NewHandler(handler RequestHandlerFunc, options ...RequestHandlerOption) *Re
 	if handler == nil {
 		panic("Handler must not be null")
 	}
-	typ := core.GetType(handler)
-	if !core.IsFunc(typ) {
+	typ := goo.GetType(handler)
+	if !typ.IsFunction() {
 		panic("Handler must be function")
 	}
 	handlerMethod := &RequestHandler{
