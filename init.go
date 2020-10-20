@@ -10,4 +10,6 @@ func init() {
 	initWebTransactionContextPool()
 	/* Request Handler Mapping */
 	core.Register(NewRequestHandlerMapping)
+	/* Request Handler Mapping Processor */
+	core.Register(NewRequestHandlerMappingProcessor)
 }
