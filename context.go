@@ -56,7 +56,12 @@ func (ctx *ProcyonServerApplicationContext) Configure() {
 
 func (ctx *ProcyonServerApplicationContext) OnConfigure() {
 	_ = ctx.createWebServer()
-	ctx.server.Run()
+}
+
+func (ctx *ProcyonServerApplicationContext) FinishConfigure() {
+	go func() {
+		ctx.server.Run()
+	}()
 }
 
 func (ctx *ProcyonServerApplicationContext) createWebServer() error {
