@@ -3,6 +3,7 @@ package web
 import (
 	"github.com/google/uuid"
 	"github.com/procyon-projects/procyon-context"
+	"strconv"
 )
 
 type WebApplicationContext interface {
@@ -59,9 +60,14 @@ func (ctx *ProcyonServerApplicationContext) OnConfigure() {
 }
 
 func (ctx *ProcyonServerApplicationContext) FinishConfigure() {
+	logger := ctx.GetLogger()
+	startedChannel := make(chan bool, 1)
 	go func() {
+		logger.Info(ctx, "Procyon started on port(s): "+strconv.Itoa(ctx.GetWebServer().GetPort()))
+		startedChannel <- true
 		ctx.server.Run()
 	}()
+	<-startedChannel
 }
 
 func (ctx *ProcyonServerApplicationContext) createWebServer() error {
