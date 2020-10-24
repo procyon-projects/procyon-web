@@ -36,13 +36,13 @@ func (server *DefaultWebServer) ServeHTTP(response http.ResponseWriter, request 
 	res.responseWriter = response
 	switch request.Method {
 	case http.MethodGet:
-		_ = server.router.DoDelete(res, req)
+		_ = server.router.DoGet(res, req)
 	case http.MethodPost:
 		_ = server.router.DoPost(res, req)
 	case http.MethodPut:
 		_ = server.router.DoPut(res, req)
 	case http.MethodDelete:
-		_ = server.router.DoPut(res, req)
+		_ = server.router.DoDelete(res, req)
 	case http.MethodPatch:
 		_ = server.router.DoPatch(res, req)
 	}

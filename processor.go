@@ -21,7 +21,7 @@ func (processor RequestHandlerMappingProcessor) BeforePeaInitialization(peaName 
 	if controller, ok := pea.(Controller); ok {
 		handlerRegistry := newSimpleHandlerRegistry()
 		controller.RegisterHandlers(handlerRegistry)
-		processor.processHandler(handlerRegistry)
+		processor.processHandler(peaName, handlerRegistry)
 	}
 	return pea, nil
 }
@@ -34,10 +34,25 @@ func (processor RequestHandlerMappingProcessor) AfterPeaInitialization(peaName s
 	return pea, nil
 }
 
-func (processor RequestHandlerMappingProcessor) processHandler(handlerRegistry HandlerRegistry) {
-	if handlerRegistry != nil {
-		if simpleRegistry, ok := handlerRegistry.(*SimpleHandlerRegistry); ok {
-			simpleRegistry.getRegistryMap()
+func (processor RequestHandlerMappingProcessor) processHandler(handlerName string, handlerRegistry HandlerRegistry) {
+	if handlerRegistry == nil {
+		return
+	}
+	if simpleRegistry, ok := handlerRegistry.(SimpleHandlerRegistry); ok {
+		registryMap := simpleRegistry.getRegistryMap()
+		for prefix, handlers := range registryMap {
+			for _, handler := range handlers {
+				requestMappingInfo := processor.createRequestMappingInfo(prefix, handler)
+				processor.requestHandlerMapping.RegisterHandlerMethod(handlerName, requestMappingInfo, handler.HandlerFunc)
+			}
 		}
 	}
+}
+
+func (processor RequestHandlerMappingProcessor) createRequestMappingInfo(prefix string, handler RequestHandler) RequestMappingInfo {
+	return newRequestMappingInfo("",
+		newMethodRequestMatcher(handler.Methods),
+		newParametersRequestMatcher(),
+		newPatternRequestMatcher(prefix, handler.Paths),
+	)
 }

@@ -47,7 +47,7 @@ type RequestHandler struct {
 	HandlerFunc RequestHandlerFunc
 }
 
-func NewHandler(handler RequestHandlerFunc, options ...RequestHandlerOption) *RequestHandler {
+func NewHandler(handler RequestHandlerFunc, options ...RequestHandlerOption) RequestHandler {
 	if handler == nil {
 		panic("Handler must not be null")
 	}
@@ -64,7 +64,7 @@ func NewHandler(handler RequestHandlerFunc, options ...RequestHandlerOption) *Re
 	if len(handlerMethod.Methods) == 0 {
 		handlerMethod.Methods = []RequestMethod{RequestMethodGet}
 	}
-	return handlerMethod
+	return *handlerMethod
 }
 
 func WithPath(paths ...string) RequestHandlerOption {
@@ -84,25 +84,25 @@ func WithMethod(methods ...RequestMethod) RequestHandlerOption {
 }
 
 type HandlerRegistry interface {
-	Register(info ...*RequestHandler)
-	RegisterGroup(prefix string, info ...*RequestHandler)
+	Register(info ...RequestHandler)
+	RegisterGroup(prefix string, info ...RequestHandler)
 }
 
 type SimpleHandlerRegistry struct {
-	registryMap map[string][]*RequestHandler
+	registryMap map[string][]RequestHandler
 }
 
-func newSimpleHandlerRegistry() *SimpleHandlerRegistry {
-	return &SimpleHandlerRegistry{
-		registryMap: make(map[string][]*RequestHandler),
+func newSimpleHandlerRegistry() SimpleHandlerRegistry {
+	return SimpleHandlerRegistry{
+		registryMap: make(map[string][]RequestHandler),
 	}
 }
 
-func (registry *SimpleHandlerRegistry) Register(info ...*RequestHandler) {
+func (registry SimpleHandlerRegistry) Register(info ...RequestHandler) {
 	registry.RegisterGroup("<nil>", info...)
 }
 
-func (registry *SimpleHandlerRegistry) RegisterGroup(prefix string, info ...*RequestHandler) {
+func (registry SimpleHandlerRegistry) RegisterGroup(prefix string, info ...RequestHandler) {
 	if len(info) == 0 {
 		return
 	}
@@ -110,15 +110,17 @@ func (registry *SimpleHandlerRegistry) RegisterGroup(prefix string, info ...*Req
 		prefix = "<nil>"
 	}
 	if registry.registryMap[prefix] == nil {
-		registry.registryMap[prefix] = make([]*RequestHandler, 0)
+		registry.registryMap[prefix] = make([]RequestHandler, 0)
 	}
 	registry.registryMap[prefix] = append(registry.registryMap[prefix], info...)
 }
 
-func (registry *SimpleHandlerRegistry) clear() {
-	registry.registryMap = make(map[string][]*RequestHandler)
+func (registry SimpleHandlerRegistry) clear() {
+	for key := range registry.registryMap {
+		delete(registry.registryMap, key)
+	}
 }
 
-func (registry *SimpleHandlerRegistry) getRegistryMap() map[string][]*RequestHandler {
+func (registry SimpleHandlerRegistry) getRegistryMap() map[string][]RequestHandler {
 	return registry.registryMap
 }

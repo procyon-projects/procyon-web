@@ -10,49 +10,81 @@ type HandlerMapping interface {
 }
 
 type MappingRegistry interface {
-	Register(mapping string, handler interface{}, fun interface{}) error
-	GetMappings() map[string]HandlerMethod
+	Register(handlerName string, mapping RequestMappingInfo, fun RequestHandlerFunc) error
+	GetMappings() map[int]HandlerMethod
 	FindMappingByUrl(path string) (string, error)
 }
 
 type defaultMappingRegistry struct {
-	mappingLookup map[string]HandlerMethod
-	urlLookup     map[string]string
-	mu            sync.RWMutex
+	nameLookup           map[string]HandlerMethod
+	mappingLookup        map[int]RequestMappingInfo
+	mappingHandlerLookup map[int]HandlerMethod
+	mappingUrlLookup     map[string]RequestMappingInfo
+	mu                   sync.RWMutex
 }
 
 func newDefaultMappingRegistry() defaultMappingRegistry {
 	return defaultMappingRegistry{
-		mappingLookup: make(map[string]HandlerMethod),
-		urlLookup:     make(map[string]string),
-		mu:            sync.RWMutex{},
+		nameLookup:           make(map[string]HandlerMethod),
+		mappingLookup:        make(map[int]RequestMappingInfo),
+		mappingHandlerLookup: make(map[int]HandlerMethod),
+		mappingUrlLookup:     make(map[string]RequestMappingInfo),
+		mu:                   sync.RWMutex{},
 	}
 }
 
-func (registry defaultMappingRegistry) Register(mapping string, handler interface{}, fun interface{}) error {
+func (registry defaultMappingRegistry) Register(handlerName string, mapping RequestMappingInfo, fun RequestHandlerFunc) error {
 	registry.mu.Lock()
-	if _, ok := registry.mappingLookup[mapping]; ok {
+	mappingHashCode := mapping.hashCode()
+	if _, ok := registry.mappingLookup[mappingHashCode]; ok {
 		registry.mu.Unlock()
-		return errors.New("ambiguous handler mapping. there is already an mapping :" + mapping)
+		return errors.New("ambiguous handler mapping. there is already an mapping :" + handlerName)
 	}
-	registry.mappingLookup[mapping] = NewHandlerMethod(handler)
+	registry.mappingLookup[mappingHashCode] = mapping
+	registry.mappingHandlerLookup[mappingHashCode] = NewHandlerMethod(handlerName, fun)
+	registry.findPurePaths(mapping)
 	registry.mu.Unlock()
 	return nil
 }
 
-func (registry defaultMappingRegistry) GetMappings() map[string]HandlerMethod {
-	return registry.mappingLookup
+func (registry defaultMappingRegistry) GetMappings() map[int]HandlerMethod {
+	return nil
 }
 
 func (registry defaultMappingRegistry) FindMappingByUrl(path string) (string, error) {
-	if result, ok := registry.urlLookup[path]; ok {
-		return result, nil
+	if _, ok := registry.mappingUrlLookup[path]; ok {
+		return "", nil
 	}
 	return "", errors.New("not found matching")
 }
 
+func (registry defaultMappingRegistry) findPurePaths(mapping RequestMappingInfo) {
+	patterns := mapping.getPatternRequestMatcher().patterns
+	for _, pattern := range patterns {
+		if !registry.isPatternPath(pattern) {
+			registry.mappingUrlLookup[pattern] = mapping
+		}
+	}
+}
+
+func (registry defaultMappingRegistry) isPatternPath(path string) bool {
+	pathVariable := false
+	for _, character := range path {
+		if character == '*' || character == '?' {
+			return true
+		}
+		if character == '{' {
+			pathVariable = true
+		} else if pathVariable && character == '}' {
+			return true
+		}
+	}
+	return false
+}
+
 type RequestHandlerMapping struct {
 	mappingRegistry MappingRegistry
+	mu              sync.Mutex
 }
 
 func NewRequestHandlerMapping() RequestHandlerMapping {
@@ -61,8 +93,8 @@ func NewRequestHandlerMapping() RequestHandlerMapping {
 	}
 }
 
-func (requestMapping RequestHandlerMapping) RegisterHandlerMethod(mapping string, handler interface{}) error {
-	return nil
+func (requestMapping RequestHandlerMapping) RegisterHandlerMethod(handlerName string, mapping RequestMappingInfo, fun RequestHandlerFunc) {
+	requestMapping.mappingRegistry.Register(handlerName, mapping, fun)
 }
 
 func (requestMapping RequestHandlerMapping) GetHandlerChain(req HttpRequest) *HandlerChain {

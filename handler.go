@@ -5,12 +5,14 @@ import (
 )
 
 type HandlerMethod struct {
+	peaName      string
 	parameters   []HandlerMethodParameter
 	returnValues []HandlerMethodReturnValue
 }
 
-func NewHandlerMethod(method interface{}) HandlerMethod {
+func NewHandlerMethod(peaName string, method interface{}) HandlerMethod {
 	return HandlerMethod{
+		peaName,
 		make([]HandlerMethodParameter, 0),
 		make([]HandlerMethodReturnValue, 0),
 	}

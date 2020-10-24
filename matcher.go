@@ -10,7 +10,7 @@ type RequestMappingInfo struct {
 	patternRequestMatcher PatternRequestMatcher
 }
 
-func NewRequestMappingInfo(name string,
+func newRequestMappingInfo(name string,
 	methodRequestMatcher MethodRequestMatcher,
 	paramsRequestMatcher ParametersRequestMatcher,
 	patternRequestMatcher PatternRequestMatcher) RequestMappingInfo {
@@ -22,28 +22,28 @@ func NewRequestMappingInfo(name string,
 	}
 }
 
-func (condition RequestMappingInfo) getMethodRequestMatcher() MethodRequestMatcher {
-	return condition.methodRequestMatcher
+func (mappingInfo RequestMappingInfo) getMethodRequestMatcher() MethodRequestMatcher {
+	return mappingInfo.methodRequestMatcher
 }
 
-func (condition RequestMappingInfo) getParametersRequestMatcher() ParametersRequestMatcher {
-	return condition.paramsRequestMatcher
+func (mappingInfo RequestMappingInfo) getParametersRequestMatcher() ParametersRequestMatcher {
+	return mappingInfo.paramsRequestMatcher
 }
 
-func (condition RequestMappingInfo) getPatternRequestMatcher() PatternRequestMatcher {
-	return condition.patternRequestMatcher
+func (mappingInfo RequestMappingInfo) getPatternRequestMatcher() PatternRequestMatcher {
+	return mappingInfo.patternRequestMatcher
 }
 
-func (condition RequestMappingInfo) MatchRequest(req HttpRequest) interface{} {
-	method := condition.methodRequestMatcher.MatchRequest(req)
+func (mappingInfo RequestMappingInfo) MatchRequest(req HttpRequest) interface{} {
+	method := mappingInfo.methodRequestMatcher.MatchRequest(req)
 	if method == nil {
 		return nil
 	} else {
-		params := condition.paramsRequestMatcher.MatchRequest(req)
+		params := mappingInfo.paramsRequestMatcher.MatchRequest(req)
 		if params == nil {
 			return nil
 		} else {
-			pattern := condition.patternRequestMatcher.MatchRequest(req)
+			pattern := mappingInfo.patternRequestMatcher.MatchRequest(req)
 			if pattern == nil {
 				return nil
 			}
@@ -52,16 +52,28 @@ func (condition RequestMappingInfo) MatchRequest(req HttpRequest) interface{} {
 	return nil
 }
 
+func (mappingInfo RequestMappingInfo) hashCode() int {
+	return 31*mappingInfo.patternRequestMatcher.hashCode() +
+		mappingInfo.methodRequestMatcher.hashCode() +
+		mappingInfo.paramsRequestMatcher.hashCode()
+}
+
 type RequestMatcher interface {
 	MatchRequest(req HttpRequest) interface{}
 }
 
 type MethodRequestMatcher struct {
+	hash    int
 	methods []RequestMethod
 }
 
-func NewMethodRequestMatcher(methods []RequestMethod) MethodRequestMatcher {
+func newMethodRequestMatcher(methods []RequestMethod) MethodRequestMatcher {
+	hashCode := 0
+	for _, method := range methods {
+		hashCode = 31*hashCode + hashCodeForString(string(method))
+	}
 	return MethodRequestMatcher{
+		hashCode,
 		methods,
 	}
 }
@@ -76,10 +88,14 @@ func (matcher MethodRequestMatcher) MatchRequest(req HttpRequest) interface{} {
 	return nil
 }
 
+func (matcher MethodRequestMatcher) hashCode() int {
+	return matcher.hash
+}
+
 type ParametersRequestMatcher struct {
 }
 
-func NewParametersRequestMatcher() ParametersRequestMatcher {
+func newParametersRequestMatcher() ParametersRequestMatcher {
 	return ParametersRequestMatcher{}
 }
 
@@ -87,13 +103,43 @@ func (matcher ParametersRequestMatcher) MatchRequest(req HttpRequest) interface{
 	return nil
 }
 
-type PatternRequestMatcher struct {
+func (matcher ParametersRequestMatcher) hashCode() int {
+	return 0
 }
 
-func NewPatternRequestMatcher() PatternRequestMatcher {
-	return PatternRequestMatcher{}
+type PatternRequestMatcher struct {
+	hash     int
+	patterns []string
+}
+
+func newPatternRequestMatcher(prefix string, paths []string) PatternRequestMatcher {
+	patterns := make([]string, len(paths))
+	hashCode := 0
+	for index, path := range paths {
+		patterns[index] = prefix + path
+		hashCode = 31*hashCode + hashCodeForString(patterns[index])
+	}
+	return PatternRequestMatcher{
+		hashCode,
+		patterns,
+	}
+}
+
+func (matcher PatternRequestMatcher) hashCode() int {
+	return matcher.hash
 }
 
 func (matcher PatternRequestMatcher) MatchRequest(req HttpRequest) interface{} {
 	return nil
+}
+
+func hashCodeForString(str string) int {
+	if len(str) > 0 {
+		hash := 0
+		for _, character := range str {
+			hash = 31*hash + int(character)
+		}
+		return hash
+	}
+	return 1
 }
