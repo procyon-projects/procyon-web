@@ -70,6 +70,8 @@ func (r HandlerMethodReturnValue) GetType() goo.Type {
 type HandlerChain interface {
 	GetHandler() interface{}
 	GetHandlerInterceptors() []HandlerInterceptor
+	ApplyHandleBefore(res HttpResponse, req HttpRequest)
+	ApplyHandleAfter(res HttpResponse, req HttpRequest)
 }
 
 type HandlerExecutionChain struct {
@@ -106,14 +108,14 @@ func (chain HandlerExecutionChain) GetHandlerInterceptors() []HandlerInterceptor
 	return chain.interceptors
 }
 
-func (chain HandlerExecutionChain) applyHandleBefore(res HttpResponse, req HttpRequest) {
+func (chain HandlerExecutionChain) ApplyHandleBefore(res HttpResponse, req HttpRequest) {
 	interceptors := chain.interceptors
 	for _, interceptor := range interceptors {
 		interceptor.HandleBefore(chain, res, req)
 	}
 }
 
-func (chain HandlerExecutionChain) applyHandleAfter(res HttpResponse, req HttpRequest) {
+func (chain HandlerExecutionChain) ApplyHandleAfter(res HttpResponse, req HttpRequest) {
 	interceptors := chain.interceptors
 	for _, interceptor := range interceptors {
 		interceptor.HandleAfter(chain, res, req)

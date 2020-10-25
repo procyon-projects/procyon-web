@@ -104,20 +104,20 @@ func (router *SimpleRouter) DoDispatch(res HttpResponse, req HttpRequest) error 
 	if err != nil {
 		return err
 	}
-	executionChain.applyHandleBefore(res, req)
+	executionChain.ApplyHandleBefore(res, req)
 
 	var adapter HandlerAdapter
-	adapter, err = router.GetHandlerAdapter(executionChain.getHandler())
+	adapter, err = router.GetHandlerAdapter(executionChain.GetHandler())
 	if err != nil {
 		return err
 	}
-	adapter.Handle(executionChain.getHandler(), res, req)
+	adapter.Handle(executionChain.GetHandler(), res, req)
 
-	executionChain.applyHandleAfter(res, req)
+	executionChain.ApplyHandleAfter(res, req)
 	return nil
 }
 
-func (router *SimpleRouter) GetHandlerChain(req HttpRequest) (*HandlerChain, error) {
+func (router *SimpleRouter) GetHandlerChain(req HttpRequest) (HandlerChain, error) {
 	mappings := router.handlerMappings
 	if len(mappings) > 0 {
 		for _, mapping := range mappings {
