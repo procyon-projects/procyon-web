@@ -16,7 +16,7 @@ type Router interface {
 	DoDelete(res HttpResponse, req HttpRequest) error
 	DoService(res HttpResponse, req HttpRequest) error
 	DoDispatch(res HttpResponse, req HttpRequest) error
-	GetHandlerChain(req HttpRequest) (*HandlerChain, error)
+	GetHandlerChain(req HttpRequest) (HandlerChain, error)
 	GetHandlerAdapter(handler interface{}) (HandlerAdapter, error)
 }
 
