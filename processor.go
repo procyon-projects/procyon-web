@@ -42,15 +42,15 @@ func (processor RequestHandlerMappingProcessor) processHandler(handlerName strin
 		registryMap := simpleRegistry.getRegistryMap()
 		for prefix, handlers := range registryMap {
 			for _, handler := range handlers {
-				requestMappingInfo := processor.createRequestMappingInfo(prefix, handler)
+				requestMappingInfo := processor.createRequestMapping(prefix, handler)
 				processor.requestHandlerMapping.RegisterHandlerMethod(handlerName, requestMappingInfo, handler.HandlerFunc)
 			}
 		}
 	}
 }
 
-func (processor RequestHandlerMappingProcessor) createRequestMappingInfo(prefix string, handler RequestHandler) RequestMappingInfo {
-	return newRequestMappingInfo("",
+func (processor RequestHandlerMappingProcessor) createRequestMapping(prefix string, handler RequestHandler) RequestMapping {
+	return NewRequestMapping("",
 		newMethodRequestMatcher(handler.Methods),
 		newParametersRequestMatcher(),
 		newPatternRequestMatcher(prefix, handler.Paths),

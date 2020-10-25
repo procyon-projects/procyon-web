@@ -4,34 +4,39 @@ import (
 	"github.com/codnect/goo"
 )
 
-type HandlerMethod struct {
-	peaName      string
+type HandlerMethod interface {
+	GetHandlerParameterCount() int
+	GetHandlerReturnTypeCount() int
+	GetHandlerParameterTypes() []HandlerMethodParameter
+	GetHandlerReturnValues() []HandlerMethodReturnValue
+}
+
+type SimpleHandlerMethod struct {
 	parameters   []HandlerMethodParameter
 	returnValues []HandlerMethodReturnValue
 }
 
-func NewHandlerMethod(peaName string, method interface{}) HandlerMethod {
-	return HandlerMethod{
-		peaName,
+func NewSimpleHandlerMethod(method interface{}) SimpleHandlerMethod {
+	return SimpleHandlerMethod{
 		make([]HandlerMethodParameter, 0),
 		make([]HandlerMethodReturnValue, 0),
 	}
 }
 
-func (m HandlerMethod) GetParameterCount() int {
-	return len(m.parameters)
+func (handlerMethod SimpleHandlerMethod) GetHandlerParameterCount() int {
+	return len(handlerMethod.parameters)
 }
 
-func (m HandlerMethod) GetReturnTypeCount() int {
-	return len(m.returnValues)
+func (handlerMethod SimpleHandlerMethod) GetHandlerReturnTypeCount() int {
+	return len(handlerMethod.returnValues)
 }
 
-func (m HandlerMethod) GetParameterTypes() []HandlerMethodParameter {
-	return m.parameters
+func (handlerMethod SimpleHandlerMethod) GetHandlerParameterTypes() []HandlerMethodParameter {
+	return handlerMethod.parameters
 }
 
-func (m HandlerMethod) GetReturnValues() []HandlerMethodReturnValue {
-	return m.returnValues
+func (handlerMethod SimpleHandlerMethod) GetHandlerReturnValues() []HandlerMethodReturnValue {
+	return handlerMethod.returnValues
 }
 
 type HandlerMethodParameter struct {
@@ -62,15 +67,20 @@ func (r HandlerMethodReturnValue) GetType() goo.Type {
 	return r.typ
 }
 
-type HandlerChain struct {
+type HandlerChain interface {
+	GetHandler() interface{}
+	GetHandlerInterceptors() []HandlerInterceptor
+}
+
+type HandlerExecutionChain struct {
 	handler      interface{}
 	interceptors []HandlerInterceptor
 }
 
-type HandlerChainOption func(chain *HandlerChain)
+type HandlerExecutionChainOption func(chain *HandlerExecutionChain)
 
-func NewHandlerExecutionChain(handler interface{}, options ...HandlerChainOption) *HandlerChain {
-	chain := &HandlerChain{
+func NewHandlerExecutionChain(handler interface{}, options ...HandlerExecutionChainOption) HandlerExecutionChain {
+	chain := &HandlerExecutionChain{
 		handler: handler,
 	}
 	if len(options) == 0 {
@@ -79,31 +89,31 @@ func NewHandlerExecutionChain(handler interface{}, options ...HandlerChainOption
 	for _, option := range options {
 		option(chain)
 	}
-	return chain
+	return *chain
 }
 
-func WithInterceptors(interceptors []HandlerInterceptor) HandlerChainOption {
-	return func(chain *HandlerChain) {
+func WithInterceptors(interceptors []HandlerInterceptor) HandlerExecutionChainOption {
+	return func(chain *HandlerExecutionChain) {
 		chain.interceptors = interceptors
 	}
 }
 
-func (chain *HandlerChain) getHandler() interface{} {
+func (chain HandlerExecutionChain) GetHandler() interface{} {
 	return chain.handler
 }
 
-func (chain *HandlerChain) getInterceptors() []HandlerInterceptor {
+func (chain HandlerExecutionChain) GetHandlerInterceptors() []HandlerInterceptor {
 	return chain.interceptors
 }
 
-func (chain *HandlerChain) applyHandleBefore(res HttpResponse, req HttpRequest) {
+func (chain HandlerExecutionChain) applyHandleBefore(res HttpResponse, req HttpRequest) {
 	interceptors := chain.interceptors
 	for _, interceptor := range interceptors {
 		interceptor.HandleBefore(chain, res, req)
 	}
 }
 
-func (chain *HandlerChain) applyHandleAfter(res HttpResponse, req HttpRequest) {
+func (chain HandlerExecutionChain) applyHandleAfter(res HttpResponse, req HttpRequest) {
 	interceptors := chain.interceptors
 	for _, interceptor := range interceptors {
 		interceptor.HandleAfter(chain, res, req)

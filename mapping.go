@@ -5,69 +5,118 @@ import (
 	"sync"
 )
 
-type HandlerMapping interface {
-	GetHandlerChain(req HttpRequest) *HandlerChain
+type RequestMapping struct {
+	name                  string
+	methodRequestMatcher  MethodRequestMatcher
+	paramsRequestMatcher  ParametersRequestMatcher
+	patternRequestMatcher PatternRequestMatcher
+}
+
+func NewRequestMapping(name string,
+	methodRequestMatcher MethodRequestMatcher,
+	paramsRequestMatcher ParametersRequestMatcher,
+	patternRequestMatcher PatternRequestMatcher) RequestMapping {
+	return RequestMapping{
+		name,
+		methodRequestMatcher,
+		paramsRequestMatcher,
+		patternRequestMatcher,
+	}
+}
+
+func (mappingInfo RequestMapping) getMethodRequestMatcher() MethodRequestMatcher {
+	return mappingInfo.methodRequestMatcher
+}
+
+func (mappingInfo RequestMapping) getParametersRequestMatcher() ParametersRequestMatcher {
+	return mappingInfo.paramsRequestMatcher
+}
+
+func (mappingInfo RequestMapping) getPatternRequestMatcher() PatternRequestMatcher {
+	return mappingInfo.patternRequestMatcher
+}
+
+func (mappingInfo RequestMapping) MatchRequest(req HttpRequest) interface{} {
+	method := mappingInfo.methodRequestMatcher.MatchRequest(req)
+	if method == nil {
+		return nil
+	} else {
+		params := mappingInfo.paramsRequestMatcher.MatchRequest(req)
+		if params == nil {
+			return nil
+		} else {
+			pattern := mappingInfo.patternRequestMatcher.MatchRequest(req)
+			if pattern == nil {
+				return nil
+			}
+		}
+	}
+	return mappingInfo
+}
+
+func (mappingInfo RequestMapping) hashCode() int {
+	return 31*mappingInfo.patternRequestMatcher.hashCode() +
+		mappingInfo.methodRequestMatcher.hashCode() +
+		mappingInfo.paramsRequestMatcher.hashCode()
 }
 
 type MappingRegistry interface {
-	Register(handlerName string, mapping RequestMappingInfo, fun RequestHandlerFunc) error
-	GetMappings() map[int]HandlerMethod
-	FindMappingByUrl(path string) (string, error)
+	Register(handlerName string, mapping interface{}, fun RequestHandlerFunc) error
+	GetMappings() map[interface{}]HandlerMethod
+	FindMappingsByUrl(path string) ([]interface{}, error)
 }
 
-type defaultMappingRegistry struct {
-	nameLookup           map[string]HandlerMethod
-	mappingLookup        map[int]RequestMappingInfo
-	mappingHandlerLookup map[int]HandlerMethod
-	mappingUrlLookup     map[string]RequestMappingInfo
-	mu                   sync.RWMutex
+type RequestMappingRegistry struct {
+	mappingHashcodeLookup map[int]bool
+	mappingLookup         map[interface{}]HandlerMethod
+	mappingUrlLookup      map[string][]interface{}
+	mu                    sync.RWMutex
 }
 
-func newDefaultMappingRegistry() defaultMappingRegistry {
-	return defaultMappingRegistry{
-		nameLookup:           make(map[string]HandlerMethod),
-		mappingLookup:        make(map[int]RequestMappingInfo),
-		mappingHandlerLookup: make(map[int]HandlerMethod),
-		mappingUrlLookup:     make(map[string]RequestMappingInfo),
-		mu:                   sync.RWMutex{},
+func NewRequestMappingRegistry() RequestMappingRegistry {
+	return RequestMappingRegistry{
+		mappingHashcodeLookup: make(map[int]bool),
+		mappingLookup:         make(map[interface{}]HandlerMethod),
+		mappingUrlLookup:      make(map[string][]interface{}),
+		mu:                    sync.RWMutex{},
 	}
 }
 
-func (registry defaultMappingRegistry) Register(handlerName string, mapping RequestMappingInfo, fun RequestHandlerFunc) error {
+func (registry RequestMappingRegistry) Register(handlerName string, mapping interface{}, fun RequestHandlerFunc) error {
 	registry.mu.Lock()
-	mappingHashCode := mapping.hashCode()
-	if _, ok := registry.mappingLookup[mappingHashCode]; ok {
+	requestMapping := mapping.(RequestMapping)
+	if _, ok := registry.mappingHashcodeLookup[requestMapping.hashCode()]; ok {
 		registry.mu.Unlock()
 		return errors.New("ambiguous handler mapping. there is already an mapping :" + handlerName)
 	}
-	registry.mappingLookup[mappingHashCode] = mapping
-	registry.mappingHandlerLookup[mappingHashCode] = NewHandlerMethod(handlerName, fun)
-	registry.findPurePaths(mapping)
+	registry.mappingHashcodeLookup[requestMapping.hashCode()] = true
+	registry.mappingLookup[mapping] = NewSimpleHandlerMethod(fun)
+	registry.findPurePaths(requestMapping)
 	registry.mu.Unlock()
 	return nil
 }
 
-func (registry defaultMappingRegistry) GetMappings() map[int]HandlerMethod {
-	return nil
+func (registry RequestMappingRegistry) GetMappings() map[interface{}]HandlerMethod {
+	return registry.mappingLookup
 }
 
-func (registry defaultMappingRegistry) FindMappingByUrl(path string) (string, error) {
-	if _, ok := registry.mappingUrlLookup[path]; ok {
-		return "", nil
+func (registry RequestMappingRegistry) FindMappingsByUrl(path string) ([]interface{}, error) {
+	if mappings, ok := registry.mappingUrlLookup[path]; ok {
+		return mappings, nil
 	}
-	return "", errors.New("not found matching")
+	return nil, errors.New("not found matching")
 }
 
-func (registry defaultMappingRegistry) findPurePaths(mapping RequestMappingInfo) {
+func (registry RequestMappingRegistry) findPurePaths(mapping RequestMapping) {
 	patterns := mapping.getPatternRequestMatcher().patterns
 	for _, pattern := range patterns {
 		if !registry.isPatternPath(pattern) {
-			registry.mappingUrlLookup[pattern] = mapping
+			registry.mappingUrlLookup[pattern] = append(registry.mappingUrlLookup[pattern], mapping)
 		}
 	}
 }
 
-func (registry defaultMappingRegistry) isPatternPath(path string) bool {
+func (registry RequestMappingRegistry) isPatternPath(path string) bool {
 	pathVariable := false
 	for _, character := range path {
 		if character == '*' || character == '?' {
@@ -82,6 +131,11 @@ func (registry defaultMappingRegistry) isPatternPath(path string) bool {
 	return false
 }
 
+type HandlerMapping interface {
+	RegisterHandlerMethod(handlerName string, mapping interface{}, fun RequestHandlerFunc)
+	GetHandlerChain(req HttpRequest) HandlerChain
+}
+
 type RequestHandlerMapping struct {
 	mappingRegistry MappingRegistry
 	mu              sync.Mutex
@@ -89,45 +143,45 @@ type RequestHandlerMapping struct {
 
 func NewRequestHandlerMapping() RequestHandlerMapping {
 	return RequestHandlerMapping{
-		mappingRegistry: newDefaultMappingRegistry(),
+		mappingRegistry: NewRequestMappingRegistry(),
 	}
 }
 
-func (requestMapping RequestHandlerMapping) RegisterHandlerMethod(handlerName string, mapping RequestMappingInfo, fun RequestHandlerFunc) {
+func (requestMapping RequestHandlerMapping) RegisterHandlerMethod(handlerName string, mapping interface{}, fun RequestHandlerFunc) {
 	requestMapping.mappingRegistry.Register(handlerName, mapping, fun)
 }
 
-func (requestMapping RequestHandlerMapping) GetHandlerChain(req HttpRequest) *HandlerChain {
+func (requestMapping RequestHandlerMapping) GetHandlerChain(req HttpRequest) HandlerChain {
+	handler := requestMapping.lookupHandlerMethod(req, "")
+	if handler != nil {
+		return requestMapping.getHandlerExecutionChain(handler, req)
+	}
 	return nil
 }
 
-func (requestMapping RequestHandlerMapping) getHandler(req HttpRequest) {
-	requestMapping.findHandlerMethod("", req)
-}
-
-func (requestMapping RequestHandlerMapping) findHandlerMethod(path string, req HttpRequest) {
-	matches := make([]match, 0)
-	directPathMapping, err := requestMapping.mappingRegistry.FindMappingByUrl(path)
+func (requestMapping RequestHandlerMapping) lookupHandlerMethod(req HttpRequest, lookupPath string) HandlerMethod {
+	requestMatches := make([]RequestMatch, 0)
+	directPathMappings, err := requestMapping.mappingRegistry.FindMappingsByUrl(lookupPath)
 	if err == nil {
-		requestMapping.addMatches(matches, directPathMapping, req)
+		requestMatches = append(requestMatches, requestMapping.getRequestMatches(req, directPathMappings)...)
 	}
-	if len(matches) > 0 {
-
-	}
+	/* todo complete this part which will match the given request with handlers */
+	return nil
 }
 
-func (requestMapping RequestHandlerMapping) addMatches(matches []match, mapping string, req HttpRequest) {
-
-}
-
-type match struct {
-	mapping       string
-	handlerMethod HandlerMethod
-}
-
-func newMatch(mapping string, method HandlerMethod) match {
-	return match{
-		mapping,
-		method,
+func (requestMapping RequestHandlerMapping) getRequestMatches(req HttpRequest, mappings []interface{}) []RequestMatch {
+	matches := make([]RequestMatch, 0)
+	for _, mapping := range mappings {
+		match := mapping.(RequestMapping).MatchRequest(req)
+		if match != nil {
+			handlerMethod := requestMapping.mappingRegistry.GetMappings()[match]
+			requestMatch := NewDefaultRequestMatch(mapping.(RequestMapping), NewSimpleHandlerMethod(handlerMethod))
+			matches = append(matches, requestMatch)
+		}
 	}
+	return matches
+}
+
+func (requestMapping RequestHandlerMapping) getHandlerExecutionChain(handlerMethod HandlerMethod, req HttpRequest) HandlerChain {
+	return nil
 }

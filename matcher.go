@@ -1,63 +1,5 @@
 package web
 
-type RequestMapping struct {
-}
-
-type RequestMappingInfo struct {
-	name                  string
-	methodRequestMatcher  MethodRequestMatcher
-	paramsRequestMatcher  ParametersRequestMatcher
-	patternRequestMatcher PatternRequestMatcher
-}
-
-func newRequestMappingInfo(name string,
-	methodRequestMatcher MethodRequestMatcher,
-	paramsRequestMatcher ParametersRequestMatcher,
-	patternRequestMatcher PatternRequestMatcher) RequestMappingInfo {
-	return RequestMappingInfo{
-		name,
-		methodRequestMatcher,
-		paramsRequestMatcher,
-		patternRequestMatcher,
-	}
-}
-
-func (mappingInfo RequestMappingInfo) getMethodRequestMatcher() MethodRequestMatcher {
-	return mappingInfo.methodRequestMatcher
-}
-
-func (mappingInfo RequestMappingInfo) getParametersRequestMatcher() ParametersRequestMatcher {
-	return mappingInfo.paramsRequestMatcher
-}
-
-func (mappingInfo RequestMappingInfo) getPatternRequestMatcher() PatternRequestMatcher {
-	return mappingInfo.patternRequestMatcher
-}
-
-func (mappingInfo RequestMappingInfo) MatchRequest(req HttpRequest) interface{} {
-	method := mappingInfo.methodRequestMatcher.MatchRequest(req)
-	if method == nil {
-		return nil
-	} else {
-		params := mappingInfo.paramsRequestMatcher.MatchRequest(req)
-		if params == nil {
-			return nil
-		} else {
-			pattern := mappingInfo.patternRequestMatcher.MatchRequest(req)
-			if pattern == nil {
-				return nil
-			}
-		}
-	}
-	return nil
-}
-
-func (mappingInfo RequestMappingInfo) hashCode() int {
-	return 31*mappingInfo.patternRequestMatcher.hashCode() +
-		mappingInfo.methodRequestMatcher.hashCode() +
-		mappingInfo.paramsRequestMatcher.hashCode()
-}
-
 type RequestMatcher interface {
 	MatchRequest(req HttpRequest) interface{}
 }
@@ -142,4 +84,28 @@ func hashCodeForString(str string) int {
 		return hash
 	}
 	return 1
+}
+
+type RequestMatch interface {
+	GetMapping() interface{}
+	GetHandlerMethod() HandlerMethod
+}
+
+type DefaultRequestMatch struct {
+	mapping       RequestMapping
+	handlerMethod HandlerMethod
+}
+
+func NewDefaultRequestMatch(mapping RequestMapping, method HandlerMethod) RequestMatch {
+	return DefaultRequestMatch{
+		mapping,
+		method,
+	}
+}
+func (requestMatch DefaultRequestMatch) GetMapping() interface{} {
+	return requestMatch.mapping
+}
+
+func (requestMatch DefaultRequestMatch) GetHandlerMethod() HandlerMethod {
+	return requestMatch.handlerMethod
 }
