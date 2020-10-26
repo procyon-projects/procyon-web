@@ -1,8 +1,6 @@
 package web
 
 import (
-	"errors"
-	"github.com/codnect/goo"
 	"github.com/procyon-projects/procyon-configure"
 	"net/http"
 	"strconv"
@@ -11,21 +9,23 @@ import (
 type Server interface {
 	Run() error
 	Stop() error
+	SetProperties(properties *configure.WebServerProperties)
 	GetPort() int
 }
+
+const DefaultWebServerPort = 8080
 
 type DefaultWebServer struct {
 	router     Router
 	properties *configure.WebServerProperties
 }
 
-func (server *DefaultWebServer) setProperties(properties *configure.WebServerProperties) {
+func (server *DefaultWebServer) SetProperties(properties *configure.WebServerProperties) {
 	server.properties = properties
 }
 
 func (server *DefaultWebServer) Run() error {
-	port := server.properties.Port
-	return http.ListenAndServe(":"+strconv.Itoa(port), server)
+	return http.ListenAndServe(":"+strconv.Itoa(server.GetPort()), server)
 }
 
 func (server *DefaultWebServer) Stop() error {
@@ -33,7 +33,13 @@ func (server *DefaultWebServer) Stop() error {
 }
 
 func (server *DefaultWebServer) GetPort() int {
-	return 8080
+	var port int
+	if server.properties == nil {
+		port = DefaultWebServerPort
+	} else {
+		port = server.properties.Port
+	}
+	return port
 }
 
 func (server *DefaultWebServer) ServeHTTP(response http.ResponseWriter, request *http.Request) {
@@ -62,13 +68,8 @@ func (server *DefaultWebServer) ServeHTTP(response http.ResponseWriter, request 
 }
 
 func newWebServer(context WebApplicationContext) (Server, error) {
-	serverProperties := context.GetSharedPeaType(goo.GetType((*configure.WebServerProperties)(nil)))
-	if serverProperties == nil {
-		return nil, errors.New("an instance of configure.WebServerProperties not found")
-	}
 	server := &DefaultWebServer{
 		router: NewSimpleRouter(context),
 	}
-	server.setProperties(serverProperties.(*configure.WebServerProperties))
 	return server, nil
 }

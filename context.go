@@ -1,7 +1,9 @@
 package web
 
 import (
+	"github.com/codnect/goo"
 	"github.com/google/uuid"
+	"github.com/procyon-projects/procyon-configure"
 	"github.com/procyon-projects/procyon-context"
 	"strconv"
 )
@@ -63,6 +65,8 @@ func (ctx *ProcyonServerApplicationContext) FinishConfigure() {
 	logger := ctx.GetLogger()
 	startedChannel := make(chan bool, 1)
 	go func() {
+		serverProperties := ctx.GetSharedPeaType(goo.GetType((*configure.WebServerProperties)(nil)))
+		ctx.server.SetProperties(serverProperties.(*configure.WebServerProperties))
 		logger.Info(ctx, "Procyon started on port(s): "+strconv.Itoa(ctx.GetWebServer().GetPort()))
 		startedChannel <- true
 		ctx.server.Run()
