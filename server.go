@@ -1,21 +1,31 @@
 package web
 
 import (
+	"errors"
+	"github.com/codnect/goo"
+	"github.com/procyon-projects/procyon-configure"
 	"net/http"
+	"strconv"
 )
 
 type Server interface {
-	Run(args ...string) error
+	Run() error
 	Stop() error
 	GetPort() int
 }
 
 type DefaultWebServer struct {
-	router Router
+	router     Router
+	properties *configure.WebServerProperties
 }
 
-func (server *DefaultWebServer) Run(args ...string) error {
-	return http.ListenAndServe(":8080", server)
+func (server *DefaultWebServer) setProperties(properties *configure.WebServerProperties) {
+	server.properties = properties
+}
+
+func (server *DefaultWebServer) Run() error {
+	port := server.properties.Port
+	return http.ListenAndServe(":"+strconv.Itoa(port), server)
 }
 
 func (server *DefaultWebServer) Stop() error {
@@ -52,7 +62,13 @@ func (server *DefaultWebServer) ServeHTTP(response http.ResponseWriter, request 
 }
 
 func newWebServer(context WebApplicationContext) (Server, error) {
-	return &DefaultWebServer{
+	serverProperties := context.GetSharedPeaType(goo.GetType((*configure.WebServerProperties)(nil)))
+	if serverProperties == nil {
+		return nil, errors.New("an instance of configure.WebServerProperties not found")
+	}
+	server := &DefaultWebServer{
 		router: NewSimpleRouter(context),
-	}, nil
+	}
+	server.setProperties(serverProperties.(*configure.WebServerProperties))
+	return server, nil
 }
