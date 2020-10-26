@@ -4,9 +4,9 @@ type RequestHandlerMappingProcessor struct {
 	requestHandlerMapping RequestHandlerMapping
 }
 
-func NewRequestHandlerMappingProcessor() RequestHandlerMappingProcessor {
+func NewRequestHandlerMappingProcessor(mapping RequestHandlerMapping) RequestHandlerMappingProcessor {
 	return RequestHandlerMappingProcessor{
-		NewRequestHandlerMapping(),
+		mapping,
 	}
 }
 

@@ -2,6 +2,7 @@ package web
 
 import (
 	"fmt"
+	"github.com/codnect/goo"
 	"github.com/google/uuid"
 	context "github.com/procyon-projects/procyon-context"
 	"net/http"
@@ -29,10 +30,23 @@ type SimpleRouter struct {
 }
 
 func NewSimpleRouter(context WebApplicationContext) *SimpleRouter {
-	return &SimpleRouter{
+	router := &SimpleRouter{
 		context:         context,
 		handlerMappings: make([]HandlerMapping, 0),
 		handlerAdapters: make([]HandlerAdapter, 0),
+	}
+	router.configureRouter()
+	return router
+}
+
+func (router *SimpleRouter) configureRouter() {
+	router.registerHandlerMappings()
+}
+
+func (router *SimpleRouter) registerHandlerMappings() {
+	handlerMappings := router.context.GetSharedPeasByType(goo.GetType((*HandlerMapping)(nil)))
+	for _, handlerMapping := range handlerMappings {
+		router.AddHandlerMappings(handlerMapping.(HandlerMapping))
 	}
 }
 

@@ -141,9 +141,9 @@ type RequestHandlerMapping struct {
 	mu              sync.Mutex
 }
 
-func NewRequestHandlerMapping() RequestHandlerMapping {
+func NewRequestHandlerMapping(mappingRegistry MappingRegistry) RequestHandlerMapping {
 	return RequestHandlerMapping{
-		mappingRegistry: NewRequestMappingRegistry(),
+		mappingRegistry: mappingRegistry,
 	}
 }
 
