@@ -15,8 +15,8 @@ type RequestMapping struct {
 func NewRequestMapping(name string,
 	methodRequestMatcher MethodRequestMatcher,
 	paramsRequestMatcher ParametersRequestMatcher,
-	patternRequestMatcher PatternRequestMatcher) RequestMapping {
-	return RequestMapping{
+	patternRequestMatcher PatternRequestMatcher) *RequestMapping {
+	return &RequestMapping{
 		name,
 		methodRequestMatcher,
 		paramsRequestMatcher,
@@ -84,7 +84,7 @@ func NewRequestMappingRegistry() RequestMappingRegistry {
 
 func (registry RequestMappingRegistry) Register(handlerName string, mapping interface{}, fun RequestHandlerFunc) error {
 	registry.mu.Lock()
-	requestMapping := mapping.(RequestMapping)
+	requestMapping := mapping.(*RequestMapping)
 	if _, ok := registry.mappingHashcodeLookup[requestMapping.hashCode()]; ok {
 		registry.mu.Unlock()
 		return errors.New("ambiguous handler mapping. there is already an mapping :" + handlerName)
@@ -107,7 +107,7 @@ func (registry RequestMappingRegistry) FindMappingsByUrl(path string) ([]interfa
 	return nil, errors.New("not found matching")
 }
 
-func (registry RequestMappingRegistry) findPurePaths(mapping RequestMapping) {
+func (registry RequestMappingRegistry) findPurePaths(mapping *RequestMapping) {
 	patterns := mapping.getPatternRequestMatcher().patterns
 	for _, pattern := range patterns {
 		if !registry.isPatternPath(pattern) {
@@ -172,10 +172,10 @@ func (requestMapping RequestHandlerMapping) lookupHandlerMethod(req HttpRequest,
 func (requestMapping RequestHandlerMapping) getRequestMatches(req HttpRequest, mappings []interface{}) []RequestMatch {
 	matches := make([]RequestMatch, 0)
 	for _, mapping := range mappings {
-		match := mapping.(RequestMapping).MatchRequest(req)
+		match := mapping.(*RequestMapping).MatchRequest(req)
 		if match != nil {
 			handlerMethod := requestMapping.mappingRegistry.GetMappings()[match]
-			requestMatch := NewDefaultRequestMatch(mapping.(RequestMapping), NewSimpleHandlerMethod(handlerMethod))
+			requestMatch := NewDefaultRequestMatch(mapping.(*RequestMapping), NewSimpleHandlerMethod(handlerMethod))
 			matches = append(matches, requestMatch)
 		}
 	}

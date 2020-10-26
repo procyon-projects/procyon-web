@@ -49,7 +49,7 @@ func (processor RequestHandlerMappingProcessor) processHandler(handlerName strin
 	}
 }
 
-func (processor RequestHandlerMappingProcessor) createRequestMapping(prefix string, handler RequestHandler) RequestMapping {
+func (processor RequestHandlerMappingProcessor) createRequestMapping(prefix string, handler RequestHandler) *RequestMapping {
 	return NewRequestMapping("",
 		newMethodRequestMatcher(handler.Methods),
 		newParametersRequestMatcher(),

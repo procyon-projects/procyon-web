@@ -92,11 +92,11 @@ type RequestMatch interface {
 }
 
 type DefaultRequestMatch struct {
-	mapping       RequestMapping
+	mapping       *RequestMapping
 	handlerMethod HandlerMethod
 }
 
-func NewDefaultRequestMatch(mapping RequestMapping, method HandlerMethod) RequestMatch {
+func NewDefaultRequestMatch(mapping *RequestMapping, method HandlerMethod) RequestMatch {
 	return DefaultRequestMatch{
 		mapping,
 		method,
