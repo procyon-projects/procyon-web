@@ -64,6 +64,9 @@ func NewHandler(handler RequestHandlerFunc, options ...RequestHandlerOption) Req
 	if len(handlerMethod.Methods) == 0 {
 		handlerMethod.Methods = []RequestMethod{RequestMethodGet}
 	}
+	if len(handlerMethod.Paths) == 0 {
+		handlerMethod.Paths = []string{""}
+	}
 	return *handlerMethod
 }
 
