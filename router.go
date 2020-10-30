@@ -41,12 +41,20 @@ func NewSimpleRouter(context WebApplicationContext) *SimpleRouter {
 
 func (router *SimpleRouter) configureRouter() {
 	router.registerHandlerMappings()
+	router.registerHandlerAdapters()
 }
 
 func (router *SimpleRouter) registerHandlerMappings() {
 	handlerMappings := router.context.GetSharedPeasByType(goo.GetType((*HandlerMapping)(nil)))
 	for _, handlerMapping := range handlerMappings {
 		router.AddHandlerMappings(handlerMapping.(HandlerMapping))
+	}
+}
+
+func (router *SimpleRouter) registerHandlerAdapters() {
+	handlerAdapters := router.context.GetSharedPeasByType(goo.GetType((*HandlerAdapter)(nil)))
+	for _, handlerAdapter := range handlerAdapters {
+		router.AddHandlerAdapters(handlerAdapter.(HandlerAdapter))
 	}
 }
 

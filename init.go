@@ -12,6 +12,8 @@ func init() {
 	core.Register(NewSimplePathMatcher)
 	/* Request Mapping Registry*/
 	core.Register(NewRequestMappingRegistry)
+	/* Handler Adapter */
+	core.Register(NewRequestMappingHandlerAdapter)
 	/* Handler Mapping */
 	core.Register(NewRequestHandlerMapping)
 	/* Request Handler Mapping Processor */

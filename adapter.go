@@ -12,27 +12,12 @@ type RequestMappingHandlerAdapter struct {
 
 type RequestMappingHandlerAdapterOption func(adapter *RequestMappingHandlerAdapter)
 
-func NewRequestMappingHandlerAdapter(options ...RequestMappingHandlerAdapterOption) *RequestMappingHandlerAdapter {
+func NewRequestMappingHandlerAdapter() *RequestMappingHandlerAdapter {
 	adapter := &RequestMappingHandlerAdapter{
 		parameterResolvers:  getDefaultMethodParameterResolvers(),
 		returnValueHandlers: getDefaultReturnValueHandlers(),
 	}
-	for _, option := range options {
-		option(adapter)
-	}
 	return adapter
-}
-
-func WithCustomParameterResolvers(resolvers ...HandlerMethodParameterResolver) RequestMappingHandlerAdapterOption {
-	return func(adapter *RequestMappingHandlerAdapter) {
-		adapter.parameterResolvers.AddMethodParameterResolver(resolvers...)
-	}
-}
-
-func WithCustomReturnValueHandlers(handlers ...HandlerMethodReturnValueHandler) RequestMappingHandlerAdapterOption {
-	return func(adapter *RequestMappingHandlerAdapter) {
-		adapter.returnValueHandlers.AddMethodReturnValueHandler(handlers...)
-	}
 }
 
 func getDefaultMethodParameterResolvers() *HandlerMethodParameterResolvers {
@@ -50,17 +35,17 @@ func getDefaultReturnValueHandlers() *HandlerMethodReturnValueHandlers {
 	return handlers
 }
 
-func (adapter RequestMappingHandlerAdapter) Supports(handler interface{}) bool {
+func (adapter *RequestMappingHandlerAdapter) Supports(handler interface{}) bool {
 	if _, ok := handler.(HandlerMethod); ok {
 		return true
 	}
 	return false
 }
 
-func (adapter RequestMappingHandlerAdapter) Handle(handler interface{}, res HttpResponse, req HttpRequest) interface{} {
+func (adapter *RequestMappingHandlerAdapter) Handle(handler interface{}, res HttpResponse, req HttpRequest) interface{} {
 	return adapter.invokeHandler(handler.(HandlerMethod), res, req)
 }
 
-func (adapter RequestMappingHandlerAdapter) invokeHandler(handler HandlerMethod, res HttpResponse, req HttpRequest) interface{} {
+func (adapter *RequestMappingHandlerAdapter) invokeHandler(handler HandlerMethod, res HttpResponse, req HttpRequest) interface{} {
 	return nil
 }

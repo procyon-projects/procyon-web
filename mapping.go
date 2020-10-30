@@ -139,6 +139,7 @@ type HandlerMapping interface {
 type RequestHandlerMapping struct {
 	pathMatcher     PathMatcher
 	mappingRegistry MappingRegistry
+	interceptors    []HandlerInterceptor
 	mu              sync.Mutex
 }
 
@@ -205,5 +206,5 @@ func (requestMapping RequestHandlerMapping) getRequestMatches(req HttpRequest, m
 }
 
 func (requestMapping RequestHandlerMapping) getHandlerExecutionChain(handlerMethod HandlerMethod, req HttpRequest) HandlerChain {
-	return nil
+	return NewHandlerExecutionChain(handlerMethod, WithInterceptors(requestMapping.interceptors))
 }
