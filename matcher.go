@@ -42,7 +42,7 @@ func newParametersRequestMatcher() ParametersRequestMatcher {
 }
 
 func (matcher ParametersRequestMatcher) MatchRequest(req HttpRequest) interface{} {
-	return nil
+	return ""
 }
 
 func (matcher ParametersRequestMatcher) hashCode() int {
@@ -50,11 +50,12 @@ func (matcher ParametersRequestMatcher) hashCode() int {
 }
 
 type PatternRequestMatcher struct {
-	hash     int
-	patterns []string
+	pathMatcher PathMatcher
+	hash        int
+	patterns    []string
 }
 
-func newPatternRequestMatcher(prefix string, paths []string) PatternRequestMatcher {
+func newPatternRequestMatcher(pathMatcher PathMatcher, prefix string, paths []string) PatternRequestMatcher {
 	patterns := make([]string, len(paths))
 	hashCode := 0
 	for index, path := range paths {
@@ -62,6 +63,7 @@ func newPatternRequestMatcher(prefix string, paths []string) PatternRequestMatch
 		hashCode = 31*hashCode + hashCodeForString(patterns[index])
 	}
 	return PatternRequestMatcher{
+		pathMatcher,
 		hashCode,
 		patterns,
 	}
@@ -72,7 +74,15 @@ func (matcher PatternRequestMatcher) hashCode() int {
 }
 
 func (matcher PatternRequestMatcher) MatchRequest(req HttpRequest) interface{} {
-	return nil
+	path := req.GetPath()
+	matches := make([]string, 0)
+	for _, pattern := range matcher.patterns {
+		result := matcher.pathMatcher.MatchPath(path, pattern)
+		if result {
+			matches = append(matches, pattern)
+		}
+	}
+	return matches
 }
 
 func hashCodeForString(str string) int {

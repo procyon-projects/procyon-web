@@ -1,11 +1,13 @@
 package web
 
 type RequestHandlerMappingProcessor struct {
+	pathMatcher           PathMatcher
 	requestHandlerMapping RequestHandlerMapping
 }
 
-func NewRequestHandlerMappingProcessor(mapping RequestHandlerMapping) RequestHandlerMappingProcessor {
+func NewRequestHandlerMappingProcessor(pathMatcher PathMatcher, mapping RequestHandlerMapping) RequestHandlerMappingProcessor {
 	return RequestHandlerMappingProcessor{
+		pathMatcher,
 		mapping,
 	}
 }
@@ -50,9 +52,8 @@ func (processor RequestHandlerMappingProcessor) processHandler(handlerName strin
 }
 
 func (processor RequestHandlerMappingProcessor) createRequestMapping(prefix string, handler RequestHandler) *RequestMapping {
-	return NewRequestMapping("",
-		newMethodRequestMatcher(handler.Methods),
+	return NewRequestMapping(newMethodRequestMatcher(handler.Methods),
 		newParametersRequestMatcher(),
-		newPatternRequestMatcher(prefix, handler.Paths),
+		newPatternRequestMatcher(processor.pathMatcher, prefix, handler.Paths),
 	)
 }

@@ -19,6 +19,10 @@ func (req HttpRequest) GetMethod() string {
 	return req.request.Method
 }
 
+func (req HttpRequest) GetPath() string {
+	return req.request.URL.Path
+}
+
 func (req HttpRequest) AddAttribute(key string, value interface{}) {
 	req.attributes[key] = value
 }

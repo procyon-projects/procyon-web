@@ -8,6 +8,8 @@ func init() {
 	initHttpResponsePool()
 	initApplicationContextPool()
 	initWebTransactionContextPool()
+	/* Patch Matcher */
+	core.Register(NewSimplePathMatcher)
 	/* Request Mapping Registry*/
 	core.Register(NewRequestMappingRegistry)
 	/* Handler Mapping */

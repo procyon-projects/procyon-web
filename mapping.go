@@ -2,22 +2,22 @@ package web
 
 import (
 	"errors"
+	"github.com/codnect/goo"
 	"sync"
 )
 
+const HandlerMappingUriVariableAttribute = "github.com.procyon.projects.procyon.handlermapping.urivariables"
+
 type RequestMapping struct {
-	name                  string
 	methodRequestMatcher  MethodRequestMatcher
 	paramsRequestMatcher  ParametersRequestMatcher
 	patternRequestMatcher PatternRequestMatcher
 }
 
-func NewRequestMapping(name string,
-	methodRequestMatcher MethodRequestMatcher,
+func NewRequestMapping(methodRequestMatcher MethodRequestMatcher,
 	paramsRequestMatcher ParametersRequestMatcher,
 	patternRequestMatcher PatternRequestMatcher) *RequestMapping {
 	return &RequestMapping{
-		name,
 		methodRequestMatcher,
 		paramsRequestMatcher,
 		patternRequestMatcher,
@@ -137,12 +137,14 @@ type HandlerMapping interface {
 }
 
 type RequestHandlerMapping struct {
+	pathMatcher     PathMatcher
 	mappingRegistry MappingRegistry
 	mu              sync.Mutex
 }
 
-func NewRequestHandlerMapping(mappingRegistry MappingRegistry) RequestHandlerMapping {
+func NewRequestHandlerMapping(pathMatcher PathMatcher, mappingRegistry MappingRegistry) RequestHandlerMapping {
 	return RequestHandlerMapping{
+		pathMatcher:     pathMatcher,
 		mappingRegistry: mappingRegistry,
 	}
 }
@@ -152,34 +154,54 @@ func (requestMapping RequestHandlerMapping) RegisterHandlerMethod(handlerName st
 }
 
 func (requestMapping RequestHandlerMapping) GetHandlerChain(req HttpRequest) HandlerChain {
-	handler := requestMapping.lookupHandlerMethod(req, "")
+	handler := requestMapping.lookupHandlerMethod(req)
 	if handler != nil {
 		return requestMapping.getHandlerExecutionChain(handler, req)
 	}
 	return nil
 }
 
-func (requestMapping RequestHandlerMapping) lookupHandlerMethod(req HttpRequest, lookupPath string) HandlerMethod {
+func (requestMapping RequestHandlerMapping) lookupHandlerMethod(req HttpRequest) HandlerMethod {
 	requestMatches := make([]RequestMatch, 0)
+	lookupPath := req.GetPath()
 	directPathMappings, err := requestMapping.mappingRegistry.FindMappingsByUrl(lookupPath)
 	if err == nil {
 		requestMatches = append(requestMatches, requestMapping.getRequestMatches(req, directPathMappings)...)
 	}
-	/* todo complete this part which will match the given request with handlers */
+	if len(requestMatches) == 0 {
+		mappings := GetMapKeys(requestMapping.mappingRegistry.GetMappings())
+		requestMatches = append(requestMatches, requestMapping.getRequestMatches(req, mappings)...)
+	}
+	if len(requestMatches) != 0 {
+		match := requestMatches[0]
+		mapping := match.GetMapping().(*RequestMapping)
+		variables := requestMapping.pathMatcher.GetUriVariables(lookupPath, mapping.getPatternRequestMatcher().patterns[0])
+		req.AddAttribute(HandlerMappingUriVariableAttribute, variables)
+		return match.GetHandlerMethod()
+	}
 	return nil
 }
 
+func GetMapKeys(mapObj interface{}) []interface{} {
+	argMapKeys := goo.GetType(mapObj).GetGoValue().MapKeys()
+	mapKeys := make([]interface{}, len(argMapKeys))
+	for i := 0; i < len(argMapKeys); i++ {
+		mapKeys[i] = argMapKeys[i].Interface()
+	}
+	return mapKeys
+}
+
 func (requestMapping RequestHandlerMapping) getRequestMatches(req HttpRequest, mappings []interface{}) []RequestMatch {
-	matches := make([]RequestMatch, 0)
+	requestMatches := make([]RequestMatch, 0)
 	for _, mapping := range mappings {
 		match := mapping.(*RequestMapping).MatchRequest(req)
 		if match != nil {
-			handlerMethod := requestMapping.mappingRegistry.GetMappings()[match]
+			handlerMethod := requestMapping.mappingRegistry.GetMappings()[mapping]
 			requestMatch := NewDefaultRequestMatch(mapping.(*RequestMapping), NewSimpleHandlerMethod(handlerMethod))
-			matches = append(matches, requestMatch)
+			requestMatches = append(requestMatches, requestMatch)
 		}
 	}
-	return matches
+	return requestMatches
 }
 
 func (requestMapping RequestHandlerMapping) getHandlerExecutionChain(handlerMethod HandlerMethod, req HttpRequest) HandlerChain {
