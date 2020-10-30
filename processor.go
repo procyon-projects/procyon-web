@@ -28,10 +28,6 @@ func (processor RequestHandlerMappingProcessor) BeforePeaInitialization(peaName 
 	return pea, nil
 }
 
-func (processor RequestHandlerMappingProcessor) Initialize() error {
-	return nil
-}
-
 func (processor RequestHandlerMappingProcessor) AfterPeaInitialization(peaName string, pea interface{}) (interface{}, error) {
 	return pea, nil
 }
@@ -56,4 +52,22 @@ func (processor RequestHandlerMappingProcessor) createRequestMapping(prefix stri
 		newParametersRequestMatcher(),
 		newPatternRequestMatcher(processor.pathMatcher, prefix, handler.Paths),
 	)
+}
+
+type RequestMappingHandlerAdapterProcessor struct {
+	adapter RequestMappingHandlerAdapter
+}
+
+func NewRequestMappingHandlerAdapterProcessor(adapter RequestMappingHandlerAdapter) RequestMappingHandlerAdapterProcessor {
+	return RequestMappingHandlerAdapterProcessor{
+		adapter,
+	}
+}
+
+func (processor RequestMappingHandlerAdapterProcessor) BeforePeaInitialization(peaName string, pea interface{}) (interface{}, error) {
+	return pea, nil
+}
+
+func (processor RequestMappingHandlerAdapterProcessor) AfterPeaInitialization(peaName string, pea interface{}) (interface{}, error) {
+	return pea, nil
 }

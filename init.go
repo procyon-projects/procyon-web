@@ -14,6 +14,8 @@ func init() {
 	core.Register(NewRequestMappingRegistry)
 	/* Handler Adapter */
 	core.Register(NewRequestMappingHandlerAdapter)
+	/* Handler Adapter Processor */
+	core.Register(NewRequestMappingHandlerAdapterProcessor)
 	/* Handler Mapping */
 	core.Register(NewRequestHandlerMapping)
 	/* Request Handler Mapping Processor */
