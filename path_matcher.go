@@ -44,6 +44,10 @@ func (pathMatcher SimplePathMatcher) GetUriVariables(path string, pattern string
 func (pathMatcher SimplePathMatcher) match(path string, pattern string, variables map[string]string) bool {
 	if strings.HasPrefix(path, pathMatcher.pathSeparator) && strings.HasPrefix(pattern, pathMatcher.pathSeparator) {
 		patternDirs := strings.Split(pattern, pathMatcher.pathSeparator)
+		if !pathMatcher.isCandidate(patternDirs, path) {
+			return false
+		}
+
 		pathDirs := strings.Split(path, pathMatcher.pathSeparator)
 		patternStartIndex := 0
 		patternEndIndex := len(patternDirs) - 1
@@ -147,6 +151,52 @@ func (pathMatcher SimplePathMatcher) match(path string, pattern string, variable
 				return true
 			}
 		}
+	}
+	return false
+}
+
+func (pathMatcher SimplePathMatcher) isCandidate(patternDirs []string, path string) bool {
+	position := 0
+	for _, pattern := range patternDirs {
+		skipped := pathMatcher.skipSeparator(path, position)
+		position += skipped
+		skipped = pathMatcher.skipPathSegment(path, position, pattern)
+		if skipped < len(pattern) {
+			return skipped > 0 || len(pattern) > 0 && pathMatcher.isWildcardChar([]rune(pattern)[0])
+		}
+		position += skipped
+	}
+	return true
+}
+
+func (pathMatcher SimplePathMatcher) skipSeparator(path string, position int) int {
+	skipped := 0
+	for strings.HasPrefix(path[position+skipped:], pathMatcher.pathSeparator) {
+		skipped += len(pathMatcher.pathSeparator)
+	}
+	return skipped
+}
+
+func (pathMatcher SimplePathMatcher) skipPathSegment(path string, position int, patternDir string) int {
+	skipped := 0
+	for _, character := range patternDir {
+		if pathMatcher.isWildcardChar(character) {
+			return skipped
+		}
+		currentPosition := position + skipped
+		if currentPosition >= len(path) {
+			return 0
+		}
+		if character == []rune(path)[currentPosition] {
+			skipped++
+		}
+	}
+	return skipped
+}
+
+func (pathMatcher SimplePathMatcher) isWildcardChar(character int32) bool {
+	if character == '?' || character == '*' || character == '{' {
+		return true
 	}
 	return false
 }
