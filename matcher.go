@@ -82,7 +82,10 @@ func (matcher PatternRequestMatcher) MatchRequest(req HttpRequest) interface{} {
 			matches = append(matches, pattern)
 		}
 	}
-	return matches
+	if len(matches) > 0 {
+		return matches
+	}
+	return nil
 }
 
 func hashCodeForString(str string) int {
