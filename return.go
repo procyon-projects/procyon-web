@@ -57,7 +57,7 @@ func NewResponseEntityReturnValueHandler() ResponseEntityReturnValueHandler {
 }
 
 func (h ResponseEntityReturnValueHandler) SupportsReturnType(returnValueType HandlerMethodReturnValue) bool {
-	if returnValueType.GetType().Equals(goo.GetType((*ResponseEntity)(nil))) {
+	if returnValueType.GetReturnType().Equals(goo.GetType((*ResponseEntity)(nil))) {
 		return true
 	}
 	return false
@@ -76,7 +76,7 @@ func NewErrorReturnValueHandler() ErrorReturnValueHandler {
 }
 
 func (h ErrorReturnValueHandler) SupportsReturnType(returnValueType HandlerMethodReturnValue) bool {
-	if returnValueType.GetType().Equals(goo.GetType((error)(nil))) {
+	if returnValueType.GetReturnType().Equals(goo.GetType((error)(nil))) {
 		return true
 	}
 	return false

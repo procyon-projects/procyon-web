@@ -21,7 +21,7 @@ type Router interface {
 	GetHandlerAdapter(handler interface{}) (HandlerAdapter, error)
 }
 
-const ApplicationContextAttribute = "WEB_APPLICATION_CONTEXT"
+const ApplicationContextAttribute = "github.com.procyon.projects.procyon.WebApplicationContext"
 
 type SimpleRouter struct {
 	context         WebApplicationContext

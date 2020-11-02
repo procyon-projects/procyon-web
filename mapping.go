@@ -6,7 +6,8 @@ import (
 	"sync"
 )
 
-const HandlerMappingUriVariableAttribute = "github.com.procyon.projects.procyon.handlermapping.urivariables"
+const HandlerMappingUriVariableAttribute = "github.com.procyon.projects.procyon.HandlerMapping.UriVariables"
+const HandlerMappingLookupPath = "github.com.procyon.projects.procyon.HandlerMapping.LookupPath"
 
 type RequestMapping struct {
 	methodRequestMatcher  MethodRequestMatcher
@@ -165,6 +166,7 @@ func (requestMapping RequestHandlerMapping) GetHandlerChain(req HttpRequest) Han
 func (requestMapping RequestHandlerMapping) lookupHandlerMethod(req HttpRequest) HandlerMethod {
 	requestMatches := make([]RequestMatch, 0)
 	lookupPath := req.GetPath()
+	req.AddAttribute(HandlerMappingLookupPath, lookupPath)
 	directPathMappings, err := requestMapping.mappingRegistry.FindMappingsByUrl(lookupPath)
 	if err == nil {
 		requestMatches = append(requestMatches, requestMapping.getRequestMatches(req, directPathMappings)...)
@@ -198,7 +200,7 @@ func (requestMapping RequestHandlerMapping) getRequestMatches(req HttpRequest, m
 		match := mapping.(*RequestMapping).MatchRequest(req)
 		if match != nil {
 			handlerMethod := requestMapping.mappingRegistry.GetMappings()[mapping]
-			requestMatch := NewDefaultRequestMatch(mapping.(*RequestMapping), NewSimpleHandlerMethod(handlerMethod))
+			requestMatch := NewDefaultRequestMatch(mapping.(*RequestMapping), handlerMethod)
 			requestMatches = append(requestMatches, requestMatch)
 		}
 	}
