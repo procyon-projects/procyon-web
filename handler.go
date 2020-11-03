@@ -9,6 +9,7 @@ type HandlerMethod interface {
 	GetHandlerReturnTypeCount() int
 	GetHandlerParameterTypes() []HandlerMethodParameter
 	GetHandlerReturnValues() []HandlerMethodReturnValue
+	InvokeHandler(args []interface{}) []interface{}
 }
 
 type SimpleHandlerMethod struct {
@@ -62,6 +63,10 @@ func (handlerMethod SimpleHandlerMethod) GetHandlerParameterTypes() []HandlerMet
 
 func (handlerMethod SimpleHandlerMethod) GetHandlerReturnValues() []HandlerMethodReturnValue {
 	return handlerMethod.returnValues
+}
+
+func (handlerMethod SimpleHandlerMethod) InvokeHandler(args []interface{}) []interface{} {
+	return handlerMethod.methodType.Call(args)
 }
 
 type HandlerMethodParameter struct {
