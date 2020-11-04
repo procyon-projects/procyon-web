@@ -1,36 +1,62 @@
 package web
 
 import (
-	"fmt"
 	"github.com/codnect/goo"
-	"github.com/google/uuid"
-	context "github.com/procyon-projects/procyon-context"
+	core "github.com/procyon-projects/procyon-core"
 	"net/http"
-	"runtime/debug"
 )
 
-type Router interface {
-	DoGet(res HttpResponse, req HttpRequest) error
-	DoPost(res HttpResponse, req HttpRequest) error
-	DoPatch(res HttpResponse, req HttpRequest) error
-	DoPut(res HttpResponse, req HttpRequest) error
-	DoDelete(res HttpResponse, req HttpRequest) error
-	DoService(res HttpResponse, req HttpRequest) error
-	DoDispatch(res HttpResponse, req HttpRequest) error
-	GetHandlerChain(req HttpRequest) (HandlerChain, error)
-	GetHandlerAdapter(handler interface{}) (HandlerAdapter, error)
+type handlerMetadata struct {
+	HandlerName string
+	Mapping     interface{}
+	Fun         RequestHandlerFunc
 }
 
-const ApplicationContextAttribute = "github.com.procyon.projects.procyon.WebApplicationContext"
+type Router interface {
+	DoGet(res http.ResponseWriter, req *http.Request)
+	DoPost(res http.ResponseWriter, req *http.Request)
+	DoPatch(res http.ResponseWriter, req *http.Request)
+	DoPut(res http.ResponseWriter, req *http.Request)
+	DoDelete(res http.ResponseWriter, req *http.Request)
+	DoService(res http.ResponseWriter, req *http.Request)
+	DoDispatch(requestContext RequestContext, res http.ResponseWriter, req *http.Request) error
+	GetRequestHandler(requestContext RequestContext, req *http.Request) (HandlerMethod, error)
+	GetHandlerAdapter(handler interface{}, requestContext RequestContext) (HandlerAdapter, error)
+}
 
-type SimpleRouter struct {
-	context         WebApplicationContext
+type ProcyonRouter struct {
+	context         ConfigurableWebApplicationContext
+	interceptors    []HandlerInterceptor
 	handlerMappings []HandlerMapping
 	handlerAdapters []HandlerAdapter
 }
 
-func NewSimpleRouter(context WebApplicationContext) *SimpleRouter {
-	router := &SimpleRouter{
+func newProcyonRouterForBenchmark(context ConfigurableWebApplicationContext, handlerRegistry SimpleHandlerRegistry) *ProcyonRouter {
+	router := &ProcyonRouter{
+		context:         context,
+		interceptors:    make([]HandlerInterceptor, 0),
+		handlerMappings: make([]HandlerMapping, 0),
+		handlerAdapters: make([]HandlerAdapter, 0),
+	}
+
+	patchMatcher := NewSimplePathMatcher()
+	requestHandlerMapping := NewRequestHandlerMapping(patchMatcher, NewRequestMappingRegistry())
+	registryMap := handlerRegistry.getRegistryMap()
+	for prefix, handlers := range registryMap {
+		for _, handler := range handlers {
+			requestMappingInfo := NewRequestMapping(newMethodRequestMatcher(handler.Methods),
+				newPatternRequestMatcher(patchMatcher, prefix, handler.Paths),
+			)
+			requestHandlerMapping.RegisterHandlerMethod("benchmark_handler", requestMappingInfo, handler.HandlerFunc)
+		}
+	}
+	router.AddHandlerMappings(requestHandlerMapping)
+	router.AddHandlerAdapters(NewRequestMappingHandlerAdapter(core.NewDefaultTypeConverterService()))
+	return router
+}
+
+func NewProcyonRouter(context ConfigurableWebApplicationContext) *ProcyonRouter {
+	router := &ProcyonRouter{
 		context:         context,
 		handlerMappings: make([]HandlerMapping, 0),
 		handlerAdapters: make([]HandlerAdapter, 0),
@@ -39,69 +65,65 @@ func NewSimpleRouter(context WebApplicationContext) *SimpleRouter {
 	return router
 }
 
-func (router *SimpleRouter) configureRouter() {
+func (router *ProcyonRouter) configureRouter() {
 	router.registerHandlerMappings()
 	router.registerHandlerAdapters()
 }
 
-func (router *SimpleRouter) registerHandlerMappings() {
+func (router *ProcyonRouter) registerHandlerMappings() {
 	handlerMappings := router.context.GetSharedPeasByType(goo.GetType((*HandlerMapping)(nil)))
 	for _, handlerMapping := range handlerMappings {
 		router.AddHandlerMappings(handlerMapping.(HandlerMapping))
 	}
 }
 
-func (router *SimpleRouter) registerHandlerAdapters() {
+func (router *ProcyonRouter) registerHandlerAdapters() {
 	handlerAdapters := router.context.GetSharedPeasByType(goo.GetType((*HandlerAdapter)(nil)))
 	for _, handlerAdapter := range handlerAdapters {
 		router.AddHandlerAdapters(handlerAdapter.(HandlerAdapter))
 	}
 }
 
-func (router *SimpleRouter) DoGet(res HttpResponse, req HttpRequest) error {
-	return router.DoService(res, req)
+func (router *ProcyonRouter) DoGet(res http.ResponseWriter, req *http.Request) {
+	router.DoService(res, req)
 }
 
-func (router *SimpleRouter) DoPost(res HttpResponse, req HttpRequest) error {
-	return router.DoService(res, req)
+func (router *ProcyonRouter) DoPost(res http.ResponseWriter, req *http.Request) {
+	router.DoService(res, req)
 }
 
-func (router *SimpleRouter) DoPatch(res HttpResponse, req HttpRequest) error {
-	return router.DoService(res, req)
+func (router *ProcyonRouter) DoPatch(res http.ResponseWriter, req *http.Request) {
+	router.DoService(res, req)
 }
 
-func (router *SimpleRouter) DoPut(res HttpResponse, req HttpRequest) error {
-	return router.DoService(res, req)
+func (router *ProcyonRouter) DoPut(res http.ResponseWriter, req *http.Request) {
+	router.DoService(res, req)
 }
 
-func (router *SimpleRouter) DoDelete(res HttpResponse, req HttpRequest) error {
-	return router.processRequest(res, req)
+func (router *ProcyonRouter) DoDelete(res http.ResponseWriter, req *http.Request) {
+	router.DoService(res, req)
 }
 
-func (router *SimpleRouter) processRequest(res HttpResponse, req HttpRequest) error {
-	return router.DoService(res, req)
-}
-
-func (router *SimpleRouter) DoService(res HttpResponse, req HttpRequest) error {
-	mainContext := router.context.(ConfigurableWebApplicationContext)
-	var transactionContext context.Context
+func (router *ProcyonRouter) DoService(res http.ResponseWriter, req *http.Request) {
+	requestContext := requestContextPool.Get().(*WebRequestContext)
 
 	// clone the logger for transaction context
-	logger := mainContext.GetLogger()
+	//logger := router.context.GetLogger()
 	defer func() {
 		if r := recover(); r != nil {
-			res.responseWriter.WriteHeader(http.StatusBadRequest)
-			// when you're done with the instances, put them into pool
-			httpRequestPool.Put(req)
-			httpResponsePool.Put(res)
-
-			applicationContextPool.Put(transactionContext.(*BaseWebApplicationContext).BaseApplicationContext)
-			webTransactionContextPool.Put(transactionContext)
-			logger.Error(transactionContext, fmt.Sprintf("%s\n%s", r, string(debug.Stack())))
+			res.WriteHeader(http.StatusBadRequest)
+			//applicationContextPool.Put(transactionContext.(*BaseWebApplicationContext).BaseApplicationContext)
+			//webTransactionContextPool.Put(transactionContext)
+			//logger.Error(transactionContext, fmt.Sprintf("%s\n%s", r, string(debug.Stack())))
+			requestContext.clear()
+			requestContextPool.Put(requestContext)
+		} else {
+			requestContext.clear()
+			requestContextPool.Put(requestContext)
 		}
 	}()
 
-	contextId, err := uuid.NewUUID()
+	/*contextId, err := uuid.NewUUID()
 	if err != nil {
 		panic(err)
 	}
@@ -111,52 +133,54 @@ func (router *SimpleRouter) DoService(res HttpResponse, req HttpRequest) error {
 	)
 	if err != nil {
 		panic(err)
-	}
-	req.AddAttribute(ApplicationContextAttribute, transactionContext)
+	}*/
 
-	err = router.DoDispatch(res, req)
+	err := router.DoDispatch(requestContext, res, req)
 	if err != nil {
 		panic(err)
 	}
-	return nil
 }
 
-func (router *SimpleRouter) DoDispatch(res HttpResponse, req HttpRequest) error {
-	executionChain, err := router.GetHandlerChain(req)
+func (router *ProcyonRouter) DoDispatch(requestContext RequestContext, res http.ResponseWriter, req *http.Request) error {
+	handler, err := router.GetRequestHandler(requestContext, req)
 	if err != nil {
 		return err
 	}
-	executionChain.ApplyHandleBefore(res, req)
+	for _, interceptor := range router.interceptors {
+		interceptor.HandleBefore(handler, requestContext, res, req)
+	}
 
 	var adapter HandlerAdapter
-	adapter, err = router.GetHandlerAdapter(executionChain.GetHandler())
+	adapter, err = router.GetHandlerAdapter(handler, requestContext)
 	if err != nil {
 		return err
 	}
-	adapter.Handle(executionChain.GetHandler(), res, req)
+	adapter.Handle(handler, requestContext, res, req)
 
-	executionChain.ApplyHandleAfter(res, req)
+	for _, interceptor := range router.interceptors {
+		interceptor.HandleAfter(handler, requestContext, res, req)
+	}
 	return nil
 }
 
-func (router *SimpleRouter) GetHandlerChain(req HttpRequest) (HandlerChain, error) {
+func (router *ProcyonRouter) GetRequestHandler(requestContext RequestContext, req *http.Request) (HandlerMethod, error) {
 	mappings := router.handlerMappings
 	if len(mappings) > 0 {
 		for _, mapping := range mappings {
-			chain := mapping.GetHandlerChain(req)
-			if chain != nil {
-				return chain, nil
+			handler := mapping.GetHandler(requestContext, req)
+			if handler != nil {
+				return handler, nil
 			}
 		}
 	}
 	return nil, NewNoHandlerFoundError("Request handler not  found")
 }
 
-func (router *SimpleRouter) GetHandlerAdapter(handler interface{}) (HandlerAdapter, error) {
+func (router *ProcyonRouter) GetHandlerAdapter(handler interface{}, requestContext RequestContext) (HandlerAdapter, error) {
 	adapters := router.handlerAdapters
 	if len(adapters) > 0 {
 		for _, adapter := range adapters {
-			if adapter.Supports(handler) {
+			if adapter.Supports(handler, requestContext) {
 				return adapter, nil
 			}
 		}
@@ -164,10 +188,10 @@ func (router *SimpleRouter) GetHandlerAdapter(handler interface{}) (HandlerAdapt
 	return nil, NewRouterError("Router handler adapter not found")
 }
 
-func (router *SimpleRouter) AddHandlerMappings(mappings ...HandlerMapping) {
+func (router *ProcyonRouter) AddHandlerMappings(mappings ...HandlerMapping) {
 	router.handlerMappings = append(router.handlerMappings, mappings...)
 }
 
-func (router *SimpleRouter) AddHandlerAdapters(adapters ...HandlerAdapter) {
+func (router *ProcyonRouter) AddHandlerAdapters(adapters ...HandlerAdapter) {
 	router.handlerAdapters = append(router.handlerAdapters, adapters...)
 }

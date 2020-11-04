@@ -5,14 +5,15 @@ import (
 	"github.com/codnect/goo"
 	"github.com/procyon-projects/procyon-context"
 	"github.com/procyon-projects/procyon-core"
+	"net/http"
 	"reflect"
 	"strings"
 	"sync"
 )
 
 type HandlerMethodParameterResolver interface {
-	SupportsParameter(parameter HandlerMethodParameter) bool
-	ResolveParameter(parameter HandlerMethodParameter, request HttpRequest) (interface{}, error)
+	SupportsParameter(parameter HandlerMethodParameter, requestContext RequestContext) bool
+	ResolveParameter(parameter HandlerMethodParameter, requestContext RequestContext, request *http.Request) (interface{}, error)
 }
 
 type HandlerMethodParameterResolvers struct {
@@ -28,7 +29,7 @@ func NewHandlerMethodParameterResolvers() *HandlerMethodParameterResolvers {
 	}
 }
 
-func (parameterResolvers *HandlerMethodParameterResolvers) SupportsParameter(parameter HandlerMethodParameter) bool {
+func (parameterResolvers *HandlerMethodParameterResolvers) SupportsParameter(parameter HandlerMethodParameter, requestContext RequestContext, request *http.Request) bool {
 	var cacheResolver HandlerMethodParameterResolver
 	parameterResolvers.cacheMutex.Lock()
 	cacheResolver = parameterResolvers.parameterResolverCache[parameter.HashCode()]
@@ -38,7 +39,7 @@ func (parameterResolvers *HandlerMethodParameterResolvers) SupportsParameter(par
 	}
 	resolvers := parameterResolvers.resolvers
 	for _, resolver := range resolvers {
-		if resolver.SupportsParameter(parameter) {
+		if resolver.SupportsParameter(parameter, requestContext) {
 			parameterResolvers.cacheMutex.Lock()
 			parameterResolvers.parameterResolverCache[parameter.HashCode()] = resolver
 			parameterResolvers.cacheMutex.Unlock()
@@ -48,15 +49,15 @@ func (parameterResolvers *HandlerMethodParameterResolvers) SupportsParameter(par
 	return false
 }
 
-func (parameterResolvers *HandlerMethodParameterResolvers) ResolveParameter(parameter HandlerMethodParameter, request HttpRequest) (interface{}, error) {
-	resolver := parameterResolvers.findParameterResolver(parameter)
+func (parameterResolvers *HandlerMethodParameterResolvers) ResolveParameter(parameter HandlerMethodParameter, requestContext RequestContext, request *http.Request) (interface{}, error) {
+	resolver := parameterResolvers.findParameterResolver(parameter, requestContext)
 	if resolver == nil {
 		return nil, NewNoHandlerParameterResolverError("Parameter resolver not found")
 	}
-	return resolver.ResolveParameter(parameter, request)
+	return resolver.ResolveParameter(parameter, requestContext, request)
 }
 
-func (parameterResolvers *HandlerMethodParameterResolvers) findParameterResolver(parameter HandlerMethodParameter) HandlerMethodParameterResolver {
+func (parameterResolvers *HandlerMethodParameterResolvers) findParameterResolver(parameter HandlerMethodParameter, requestContext RequestContext) HandlerMethodParameterResolver {
 	var cacheResolver HandlerMethodParameterResolver
 	parameterResolvers.cacheMutex.Lock()
 	cacheResolver = parameterResolvers.parameterResolverCache[parameter.HashCode()]
@@ -66,7 +67,7 @@ func (parameterResolvers *HandlerMethodParameterResolvers) findParameterResolver
 	}
 	resolvers := parameterResolvers.resolvers
 	for _, resolver := range resolvers {
-		if resolver.SupportsParameter(parameter) {
+		if resolver.SupportsParameter(parameter, requestContext) {
 			parameterResolvers.cacheMutex.Lock()
 			parameterResolvers.parameterResolverCache[parameter.HashCode()] = resolver
 			parameterResolvers.cacheMutex.Unlock()
@@ -90,7 +91,7 @@ func NewContextMethodParameterResolver() ContextMethodParameterResolver {
 	}
 }
 
-func (resolver ContextMethodParameterResolver) SupportsParameter(parameter HandlerMethodParameter) bool {
+func (resolver ContextMethodParameterResolver) SupportsParameter(parameter HandlerMethodParameter, requestContext RequestContext) bool {
 	parameterType := parameter.GetParameterType()
 	if parameterType.Equals(resolver.contextType) {
 		return true
@@ -98,11 +99,11 @@ func (resolver ContextMethodParameterResolver) SupportsParameter(parameter Handl
 	return false
 }
 
-func (resolver ContextMethodParameterResolver) ResolveParameter(parameter HandlerMethodParameter, request HttpRequest) (interface{}, error) {
-	if request.HasAttribute(ApplicationContextAttribute) {
+func (resolver ContextMethodParameterResolver) ResolveParameter(parameter HandlerMethodParameter, requestContext RequestContext, request *http.Request) (interface{}, error) {
+	/*if requestContext.HasAttribute(ApplicationContextAttribute) {
 		return request.GetAttribute(ApplicationContextAttribute).(context.Context), nil
-	}
-	return nil, nil
+	}*/
+	return requestContext, nil
 }
 
 type RequestMethodParameterResolver struct {
@@ -120,7 +121,7 @@ func NewRequestMethodParameterResolver(converterService core.TypeConverterServic
 	}
 }
 
-func (resolver RequestMethodParameterResolver) SupportsParameter(parameter HandlerMethodParameter) bool {
+func (resolver RequestMethodParameterResolver) SupportsParameter(parameter HandlerMethodParameter, requestContext RequestContext) bool {
 	if parameter.GetParameterType().IsStruct() {
 		structType := parameter.GetParameterType().ToStructType()
 		defer func() {
@@ -153,8 +154,8 @@ func (resolver RequestMethodParameterResolver) SupportsParameter(parameter Handl
 	return false
 }
 
-func (resolver RequestMethodParameterResolver) ResolveParameter(parameter HandlerMethodParameter, request HttpRequest) (interface{}, error) {
-	if !resolver.SupportsParameter(parameter) {
+func (resolver RequestMethodParameterResolver) ResolveParameter(parameter HandlerMethodParameter, requestContext RequestContext, request *http.Request) (interface{}, error) {
+	if !resolver.SupportsParameter(parameter, requestContext) {
 		return nil, nil /* todo */
 	}
 
@@ -180,11 +181,11 @@ func (resolver RequestMethodParameterResolver) ResolveParameter(parameter Handle
 		}
 
 		if "path" == requestTag.Value {
-			resolver.bindPathVariables(fieldVal, fieldType.ToStructType(), request)
+			resolver.bindPathVariables(fieldVal, fieldType.ToStructType(), requestContext)
 		} else if "param" == requestTag.Value {
 			resolver.bindQueryParameters(fieldVal, fieldType.ToStructType(), request)
 		} else if "body" == requestTag.Value {
-			json.NewDecoder(request.GetBody()).Decode(fieldVal)
+			json.NewDecoder(request.Body).Decode(fieldVal)
 		} else if "header" == requestTag.Value {
 			resolver.bindHeader(fieldVal, fieldType.ToStructType(), request)
 		}
@@ -196,8 +197,8 @@ func (resolver RequestMethodParameterResolver) ResolveParameter(parameter Handle
 	return reflect.ValueOf(parameterObj).Elem().Interface(), nil
 }
 
-func (resolver RequestMethodParameterResolver) bindQueryParameters(parentInstance interface{}, structType goo.Struct, request HttpRequest) {
-	queryParams := request.GetQueryParameters()
+func (resolver RequestMethodParameterResolver) bindQueryParameters(parentInstance interface{}, structType goo.Struct, request *http.Request) {
+	queryParams := request.URL.Query()
 	if len(queryParams) > 0 && structType.GetFieldCount() > 0 {
 		for _, field := range structType.GetFields() {
 			tag, err := resolver.getBindingTag(field)
@@ -211,23 +212,33 @@ func (resolver RequestMethodParameterResolver) bindQueryParameters(parentInstanc
 	}
 }
 
-func (resolver RequestMethodParameterResolver) bindPathVariables(parentInstance interface{}, structType goo.Struct, request HttpRequest) {
-	pathParams := request.GetAttribute(HandlerMappingUriVariableAttribute).(map[string]string)
+func (resolver RequestMethodParameterResolver) bindPathVariables(parentInstance interface{}, structType goo.Struct, requestContext RequestContext) {
+	pathParams := requestContext.GetPathVariables()
 	if len(pathParams) > 0 && structType.GetFieldCount() > 0 {
 		for _, field := range structType.GetFields() {
 			tag, err := resolver.getBindingTag(field)
 			if err != nil {
 				continue
 			}
-			if value, ok := pathParams[tag.Value]; ok {
+			value, ok := resolver.findPathVariableName(tag.Value, pathParams)
+			if ok {
 				resolver.bindField(parentInstance, field, value)
 			}
 		}
 	}
 }
 
-func (resolver RequestMethodParameterResolver) bindHeader(parentInstance interface{}, structType goo.Struct, request HttpRequest) {
-	headerParams := request.GetHeader()
+func (resolver RequestMethodParameterResolver) findPathVariableName(key string, pathParams []PathVariable) (interface{}, bool) {
+	for _, pathParam := range pathParams {
+		if pathParam.Key == key {
+			return pathParam.Value, true
+		}
+	}
+	return nil, false
+}
+
+func (resolver RequestMethodParameterResolver) bindHeader(parentInstance interface{}, structType goo.Struct, request *http.Request) {
+	headerParams := request.Header
 	if len(headerParams) > 0 && structType.GetFieldCount() > 0 {
 		for _, field := range structType.GetFields() {
 			tag, err := resolver.getBindingTag(field)

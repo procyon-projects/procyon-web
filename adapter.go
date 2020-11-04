@@ -1,10 +1,13 @@
 package web
 
-import "github.com/procyon-projects/procyon-core"
+import (
+	"github.com/procyon-projects/procyon-core"
+	"net/http"
+)
 
 type HandlerAdapter interface {
-	Supports(handler interface{}) bool
-	Handle(handler interface{}, res HttpResponse, req HttpRequest) interface{}
+	Supports(handler interface{}, requestContext RequestContext) bool
+	Handle(handler interface{}, requestContext RequestContext, res http.ResponseWriter, req *http.Request) interface{}
 }
 
 type RequestMappingHandlerAdapter struct {
@@ -39,19 +42,19 @@ func getDefaultReturnValueHandlers() *HandlerMethodReturnValueHandlers {
 	return handlers
 }
 
-func (adapter *RequestMappingHandlerAdapter) Supports(handler interface{}) bool {
+func (adapter *RequestMappingHandlerAdapter) Supports(handler interface{}, requestContext RequestContext) bool {
 	if _, ok := handler.(HandlerMethod); ok {
 		return true
 	}
 	return false
 }
 
-func (adapter *RequestMappingHandlerAdapter) Handle(handler interface{}, res HttpResponse, req HttpRequest) interface{} {
-	return adapter.invokeHandler(handler.(HandlerMethod), res, req)
+func (adapter *RequestMappingHandlerAdapter) Handle(handler interface{}, requestContext RequestContext, res http.ResponseWriter, req *http.Request) interface{} {
+	return adapter.invokeHandler(handler.(HandlerMethod), requestContext, res, req)
 }
 
-func (adapter *RequestMappingHandlerAdapter) invokeHandler(handler HandlerMethod, res HttpResponse, req HttpRequest) interface{} {
-	arguments := adapter.getMethodArgumentValues(handler, req)
+func (adapter *RequestMappingHandlerAdapter) invokeHandler(handler HandlerMethod, requestContext RequestContext, res http.ResponseWriter, req *http.Request) interface{} {
+	arguments := adapter.getMethodArgumentValues(handler, requestContext, req)
 	results := handler.InvokeHandler(arguments)
 	if len(results) > 0 {
 
@@ -59,16 +62,16 @@ func (adapter *RequestMappingHandlerAdapter) invokeHandler(handler HandlerMethod
 	return nil
 }
 
-func (adapter *RequestMappingHandlerAdapter) getMethodArgumentValues(handler HandlerMethod, req HttpRequest) []interface{} {
+func (adapter *RequestMappingHandlerAdapter) getMethodArgumentValues(handler HandlerMethod, requestContext RequestContext, req *http.Request) []interface{} {
 	if handler.GetHandlerParameterCount() == 0 {
 		return nil
 	}
 	argumentValues := make([]interface{}, handler.GetHandlerParameterCount())
 	for index, parameterType := range handler.GetHandlerParameterTypes() {
-		if !adapter.parameterResolvers.SupportsParameter(parameterType) {
+		if !adapter.parameterResolvers.SupportsParameter(parameterType, requestContext, req) {
 			panic("No suitable parameter resolver")
 		}
-		value, err := adapter.parameterResolvers.ResolveParameter(parameterType, req)
+		value, err := adapter.parameterResolvers.ResolveParameter(parameterType, requestContext, req)
 		if err != nil {
 			panic(err)
 		}

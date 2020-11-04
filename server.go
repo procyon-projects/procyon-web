@@ -1,6 +1,7 @@
 package web
 
 import (
+	"github.com/google/uuid"
 	"github.com/procyon-projects/procyon-configure"
 	"net/http"
 	"strconv"
@@ -15,24 +16,24 @@ type Server interface {
 
 const DefaultWebServerPort = 8080
 
-type DefaultWebServer struct {
+type ProcyonWebServer struct {
 	router     Router
 	properties *configure.WebServerProperties
 }
 
-func (server *DefaultWebServer) SetProperties(properties *configure.WebServerProperties) {
+func (server *ProcyonWebServer) SetProperties(properties *configure.WebServerProperties) {
 	server.properties = properties
 }
 
-func (server *DefaultWebServer) Run() error {
+func (server *ProcyonWebServer) Run() error {
 	return http.ListenAndServe(":"+strconv.Itoa(server.GetPort()), server)
 }
 
-func (server *DefaultWebServer) Stop() error {
+func (server *ProcyonWebServer) Stop() error {
 	return nil
 }
 
-func (server *DefaultWebServer) GetPort() int {
+func (server *ProcyonWebServer) GetPort() int {
 	var port int
 	if server.properties == nil {
 		port = DefaultWebServerPort
@@ -42,34 +43,35 @@ func (server *DefaultWebServer) GetPort() int {
 	return port
 }
 
-func (server *DefaultWebServer) ServeHTTP(response http.ResponseWriter, request *http.Request) {
-	// if an instance of http request exist, get from pool
-	req := httpRequestPool.Get().(HttpRequest)
-	req.request = request
-	req.clearAttributes()
-	// if an instance of http response exist, get from pool
-	res := httpResponsePool.Get().(HttpResponse)
-	res.responseWriter = response
+func (server *ProcyonWebServer) ServeHTTP(response http.ResponseWriter, request *http.Request) {
 	switch request.Method {
 	case http.MethodGet:
-		_ = server.router.DoGet(res, req)
+		server.router.DoGet(response, request)
 	case http.MethodPost:
-		_ = server.router.DoPost(res, req)
+		server.router.DoPost(response, request)
 	case http.MethodPut:
-		_ = server.router.DoPut(res, req)
+		server.router.DoPut(response, request)
 	case http.MethodDelete:
-		_ = server.router.DoDelete(res, req)
+		server.router.DoDelete(response, request)
 	case http.MethodPatch:
-		_ = server.router.DoPatch(res, req)
+		server.router.DoPatch(response, request)
 	}
-	// when you're done with the instances, put them into pool
-	httpRequestPool.Put(req)
-	httpResponsePool.Put(res)
 }
 
-func newWebServer(context WebApplicationContext) (Server, error) {
-	server := &DefaultWebServer{
-		router: NewSimpleRouter(context),
+func newProcyonWebServer(context WebApplicationContext) (Server, error) {
+	server := &ProcyonWebServer{
+		router: NewProcyonRouter(context.(ConfigurableWebApplicationContext)),
 	}
 	return server, nil
+}
+
+func NewProcyonWebServerForBenchmark(handlerRegistry SimpleHandlerRegistry) *ProcyonWebServer {
+	appId, _ := uuid.NewUUID()
+	contextId, _ := uuid.NewUUID()
+	ctx := NewProcyonServerApplicationContext(appId, contextId)
+
+	server := &ProcyonWebServer{
+		router: newProcyonRouterForBenchmark(ctx.BaseWebApplicationContext, handlerRegistry),
+	}
+	return server
 }

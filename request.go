@@ -102,15 +102,12 @@ func newSimpleHandlerRegistry() SimpleHandlerRegistry {
 }
 
 func (registry SimpleHandlerRegistry) Register(info ...RequestHandler) {
-	registry.RegisterGroup("<nil>", info...)
+	registry.RegisterGroup("", info...)
 }
 
 func (registry SimpleHandlerRegistry) RegisterGroup(prefix string, info ...RequestHandler) {
 	if len(info) == 0 {
 		return
-	}
-	if prefix == "" {
-		prefix = "<nil>"
 	}
 	if registry.registryMap[prefix] == nil {
 		registry.registryMap[prefix] = make([]RequestHandler, 0)

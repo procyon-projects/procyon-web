@@ -3,21 +3,14 @@ package web
 import "sync"
 
 var (
-	httpRequestPool           sync.Pool
-	httpResponsePool          sync.Pool
+	requestContextPool        sync.Pool
 	webTransactionContextPool sync.Pool
 	applicationContextPool    sync.Pool
 )
 
-func initHttpRequestPool() {
-	httpRequestPool = sync.Pool{
-		New: newHttpRequest,
-	}
-}
-
-func initHttpResponsePool() {
-	httpResponsePool = sync.Pool{
-		New: newHttpResponse,
+func initRequestContextPool() {
+	requestContextPool = sync.Pool{
+		New: newWebRequestContext,
 	}
 }
 

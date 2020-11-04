@@ -1,52 +1,40 @@
 package web
 
+import "net/http"
+
 type RequestMatcher interface {
-	MatchRequest(req HttpRequest) interface{}
+	MatchRequest(requestContext RequestContext, req *http.Request) bool
 }
 
 type MethodRequestMatcher struct {
-	hash    int
-	methods []RequestMethod
+	hash      int
+	methods   []RequestMethod
+	methodMap map[string]bool
 }
 
 func newMethodRequestMatcher(methods []RequestMethod) MethodRequestMatcher {
+	methodMap := make(map[string]bool)
 	hashCode := 0
 	for _, method := range methods {
+		methodMap[string(method)] = true
 		hashCode = 31*hashCode + hashCodeForString(string(method))
 	}
 	return MethodRequestMatcher{
 		hashCode,
 		methods,
+		methodMap,
 	}
 }
 
-func (matcher MethodRequestMatcher) MatchRequest(req HttpRequest) interface{} {
-	requestMethod := GetRequestMethod(req.GetMethod())
-	for _, method := range matcher.methods {
-		if method == requestMethod {
-			return matcher
-		}
+func (matcher MethodRequestMatcher) MatchRequest(requestContext RequestContext, req *http.Request) bool {
+	if _, ok := matcher.methodMap[req.Method]; ok {
+		return true
 	}
-	return nil
+	return false
 }
 
 func (matcher MethodRequestMatcher) hashCode() int {
 	return matcher.hash
-}
-
-type ParametersRequestMatcher struct {
-}
-
-func newParametersRequestMatcher() ParametersRequestMatcher {
-	return ParametersRequestMatcher{}
-}
-
-func (matcher ParametersRequestMatcher) MatchRequest(req HttpRequest) interface{} {
-	return ""
-}
-
-func (matcher ParametersRequestMatcher) hashCode() int {
-	return 0
 }
 
 type PatternRequestMatcher struct {
@@ -60,6 +48,7 @@ func newPatternRequestMatcher(pathMatcher PathMatcher, prefix string, paths []st
 	hashCode := 0
 	for index, path := range paths {
 		patterns[index] = prefix + path
+		pathMatcher.(SimplePathMatcher).RegisterPatternCache(patterns[index])
 		hashCode = 31*hashCode + hashCodeForString(patterns[index])
 	}
 	return PatternRequestMatcher{
@@ -73,19 +62,14 @@ func (matcher PatternRequestMatcher) hashCode() int {
 	return matcher.hash
 }
 
-func (matcher PatternRequestMatcher) MatchRequest(req HttpRequest) interface{} {
-	path := req.GetPath()
-	matches := make([]string, 0)
+func (matcher PatternRequestMatcher) MatchRequest(requestContext RequestContext, req *http.Request) bool {
 	for _, pattern := range matcher.patterns {
-		result := matcher.pathMatcher.MatchPath(path, pattern)
+		result := matcher.pathMatcher.MatchPath(requestContext, req.URL.Path, pattern)
 		if result {
-			matches = append(matches, pattern)
+			return true
 		}
 	}
-	if len(matches) > 0 {
-		return matches
-	}
-	return nil
+	return false
 }
 
 func hashCodeForString(str string) int {
@@ -97,28 +81,4 @@ func hashCodeForString(str string) int {
 		return hash
 	}
 	return 1
-}
-
-type RequestMatch interface {
-	GetMapping() interface{}
-	GetHandlerMethod() HandlerMethod
-}
-
-type DefaultRequestMatch struct {
-	mapping       *RequestMapping
-	handlerMethod HandlerMethod
-}
-
-func NewDefaultRequestMatch(mapping *RequestMapping, method HandlerMethod) RequestMatch {
-	return DefaultRequestMatch{
-		mapping,
-		method,
-	}
-}
-func (requestMatch DefaultRequestMatch) GetMapping() interface{} {
-	return requestMatch.mapping
-}
-
-func (requestMatch DefaultRequestMatch) GetHandlerMethod() HandlerMethod {
-	return requestMatch.handlerMethod
 }

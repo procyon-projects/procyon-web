@@ -4,8 +4,7 @@ import core "github.com/procyon-projects/procyon-core"
 
 func init() {
 	/* Initialize Pools */
-	initHttpRequestPool()
-	initHttpResponsePool()
+	initRequestContextPool()
 	initApplicationContextPool()
 	initWebTransactionContextPool()
 	/* Patch Matcher */
