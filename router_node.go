@@ -240,6 +240,7 @@ type RouterMethodNode struct {
 func (methodNode *RouterMethodNode) AddRoute(path string, handler RequestHandlerFunc) {
 	if methodNode.root == nil {
 		rootNode := &RouterPathNode{
+			path:     "/",
 			fullPath: "/",
 		}
 		rootNode.AddChildNode(path, path, handler)
