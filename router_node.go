@@ -50,8 +50,8 @@ visit:
 					}
 					pathNode := &RouterPathNode{
 						nodeType: PathSegmentNode,
-						path:     replacePathVariableWithAsterisk(path[matchIndex:tempEndIndex]),
-						fullPath: replacePathVariableWithAsterisk(sanitizePath(fullPath[:fullPathIndex+matchIndex+tempEndIndex])),
+						path:     path[matchIndex:tempEndIndex],
+						fullPath: sanitizePath(fullPath[:fullPathIndex+matchIndex+tempEndIndex]),
 					}
 					node.childNodes = append(node.childNodes, pathNode)
 					node = pathNode
@@ -90,11 +90,11 @@ visit:
 					}
 					node.childNodes = []*RouterPathNode{newNode}
 					node.indices = string([]byte{node.path[matchIndex]})
-					node.path = replacePathVariableWithAsterisk(sanitizePath(path[:matchIndex]))
+					node.path = sanitizePath(path[:matchIndex])
 					node.handler = nil
 					node.pathVariableNames = nil
 					node.pathVariableRegex = nil
-					node.fullPath = replacePathVariableWithAsterisk(sanitizePath(fullPath[:fullPathIndex+matchIndex]))
+					node.fullPath = sanitizePath(fullPath[:fullPathIndex+matchIndex])
 					startIndex += matchIndex
 					fullPathIndex += len(node.path)
 				}
@@ -136,7 +136,7 @@ visit:
 					}
 					pathSegmentNode := &RouterPathNode{
 						nodeType: PathSegmentNode,
-						path:     replacePathVariableWithAsterisk(sanitizePath(path[:tempEndIndex])),
+						path:     sanitizePath(path[:tempEndIndex]),
 						fullPath: fullPath,
 					}
 					startIndex += len(path[:tempEndIndex])
@@ -154,8 +154,8 @@ visit:
 
 					variableNode := &RouterPathNode{
 						nodeType: PathVariableNode,
-						path:     replacePathVariableWithAsterisk(sanitizePath(path[:processed])),
-						fullPath: replacePathVariableWithAsterisk(sanitizePath(fullPath[:fullPathIndex+processed])),
+						path:     sanitizePath(path[:processed]),
+						fullPath: sanitizePath(fullPath[:fullPathIndex+processed]),
 					}
 					startIndex += processed
 					path = path[processed:]
@@ -170,7 +170,7 @@ visit:
 		}
 	}
 	node.handler = handler
-	node.fullPath = fullPath
+	node.fullPath = sanitizePathSegment(fullPath, false)
 	node.pathVariableNames = pathVariableNames
 	node.pathVariableRegex = pathVariableRegex
 }
@@ -304,6 +304,10 @@ func isPathVariable(str string) bool {
 }
 
 func sanitizePath(path string) string {
+	return sanitizePathSegment(path, true)
+}
+
+func sanitizePathSegment(path string, wildcard bool) string {
 	offset := 0
 	result := ""
 	colon := false
@@ -322,10 +326,13 @@ func sanitizePath(path string) string {
 		colon = true
 	}
 	result = result + path[offset:]
-	return result
+	if !wildcard {
+		return result
+	}
+	return sanitizePathVariable(result)
 }
 
-func replacePathVariableWithAsterisk(path string) string {
+func sanitizePathVariable(path string) string {
 	if path == "/" || path == "" {
 		return path
 	}
