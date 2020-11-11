@@ -6,26 +6,27 @@ import (
 )
 
 type HandlerAdapter interface {
-	Supports(handler interface{}, requestContext RequestContext) bool
-	Handle(handler interface{}, requestContext RequestContext, res http.ResponseWriter, req *http.Request) interface{}
+	Supports(handler *HandlerMethod, requestContext RequestContext) bool
+	Handle(handler *HandlerMethod, requestContext RequestContext, res http.ResponseWriter, req *http.Request) interface{}
 }
 
 type RequestMappingHandlerAdapter struct {
 	typeConverterService core.TypeConverterService
-	parameterResolvers   *HandlerMethodParameterResolvers
-	returnValueHandlers  *HandlerMethodReturnValueHandlers
+	/*parameterResolvers   *HandlerMethodParameterResolvers
+	returnValueHandlers  *HandlerMethodReturnValueHandlers*/
 }
 
 type RequestMappingHandlerAdapterOption func(adapter *RequestMappingHandlerAdapter)
 
 func NewRequestMappingHandlerAdapter(service core.TypeConverterService) *RequestMappingHandlerAdapter {
 	adapter := &RequestMappingHandlerAdapter{
-		parameterResolvers:  getDefaultMethodParameterResolvers(service),
-		returnValueHandlers: getDefaultReturnValueHandlers(),
+		//parameterResolvers:  getDefaultMethodParameterResolvers(service),
+		//returnValueHandlers: getDefaultReturnValueHandlers(),
 	}
 	return adapter
 }
 
+/*
 func getDefaultMethodParameterResolvers(service core.TypeConverterService) *HandlerMethodParameterResolvers {
 	resolvers := NewHandlerMethodParameterResolvers()
 	resolvers.AddMethodParameterResolver(NewContextMethodParameterResolver())
@@ -41,41 +42,13 @@ func getDefaultReturnValueHandlers() *HandlerMethodReturnValueHandlers {
 	)
 	return handlers
 }
+*/
 
-func (adapter *RequestMappingHandlerAdapter) Supports(handler interface{}, requestContext RequestContext) bool {
-	if _, ok := handler.(HandlerMethod); ok {
-		return true
-	}
-	return false
+func (adapter *RequestMappingHandlerAdapter) Supports(handler *HandlerMethod, requestContext RequestContext) bool {
+	return true
 }
 
-func (adapter *RequestMappingHandlerAdapter) Handle(handler interface{}, requestContext RequestContext, res http.ResponseWriter, req *http.Request) interface{} {
-	return adapter.invokeHandler(handler.(HandlerMethod), requestContext, res, req)
-}
-
-func (adapter *RequestMappingHandlerAdapter) invokeHandler(handler HandlerMethod, requestContext RequestContext, res http.ResponseWriter, req *http.Request) interface{} {
-	arguments := adapter.getMethodArgumentValues(handler, requestContext, req)
-	results := handler.InvokeHandler(arguments)
-	if len(results) > 0 {
-
-	}
+func (adapter *RequestMappingHandlerAdapter) Handle(handler *HandlerMethod, requestContext RequestContext, res http.ResponseWriter, req *http.Request) interface{} {
+	handler.method(requestContext)
 	return nil
-}
-
-func (adapter *RequestMappingHandlerAdapter) getMethodArgumentValues(handler HandlerMethod, requestContext RequestContext, req *http.Request) []interface{} {
-	if handler.GetHandlerParameterCount() == 0 {
-		return nil
-	}
-	argumentValues := make([]interface{}, handler.GetHandlerParameterCount())
-	for index, parameterType := range handler.GetHandlerParameterTypes() {
-		if !adapter.parameterResolvers.SupportsParameter(parameterType, requestContext, req) {
-			panic("No suitable parameter resolver")
-		}
-		value, err := adapter.parameterResolvers.ResolveParameter(parameterType, requestContext, req)
-		if err != nil {
-			panic(err)
-		}
-		argumentValues[index] = value
-	}
-	return argumentValues
 }

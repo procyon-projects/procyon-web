@@ -10,82 +10,47 @@ func newRouterTree() *RouterTree {
 	}
 }
 
-func (tree *RouterTree) GetHandlerMethod(path string, method RequestMethod) {
+func (tree *RouterTree) GetHandlerMethod(path string, method RequestMethod) *HandlerMethod {
 	methodNode := tree.GetMethodNode(method)
-	if methodNode == nil || methodNode.root == nil {
-		return
-	}
-	routePath := tree.search(methodNode.root, 0, path, 0)
-	if routePath != nil {
-
-	}
-}
-
-func (tree *RouterTree) search(node *RouterPathNode, index int, path string, processed int) interface{} {
-	var wildcardNode *RouterPathNode
-
-search:
-	if index >= len(path) {
-		if node.handler != nil {
-			return node
-		}
+	if methodNode == nil {
 		return nil
 	}
+	return tree.search(methodNode.root, methodNode.root.wildCardNode, path)
+}
 
-	if node.nodeType == PathSegmentNode {
+func (tree *RouterTree) search(node *RouterPathNode, wildcardNode *RouterPathNode, path string) *HandlerMethod {
 
-		for index < len(path) && (index-processed) < len(node.path) && path[index] == node.path[index-processed] {
-			index++
-		}
+	if len(path) == 0 {
+		return node.handler
+	}
 
-		if len(node.path) != index-processed {
-			return nil
-		}
-
-		if index >= len(path) {
-			if node.handler != nil {
-				return node
-			}
-			return nil
-		}
-
-		wildcardNode = nil
+	if node != nil {
+		path = path[len(node.path):]
 		for nodeIndex := 0; nodeIndex < len(node.indices); nodeIndex++ {
-			if path[index] == node.indices[nodeIndex] {
-				processed += len(node.path)
-				result := tree.search(node.childNodes[nodeIndex], index, path, processed)
-				if result != nil {
-					return result
-				}
-				break
-			} else if '*' == node.indices[nodeIndex] {
-				wildcardNode = node.childNodes[nodeIndex]
+			if path[0] == node.indices[nodeIndex] {
+				return tree.search(node.childNodes[nodeIndex], node.childNodes[nodeIndex].wildCardNode, path)
 			}
 		}
+	}
+	if wildcardNode != nil {
+		end := 0
+		for end < len(path) && path[end] != '/' {
+			end++
+		}
 
-		if wildcardNode != nil {
-			processed += len(node.path)
-			result := tree.search(wildcardNode, index, path, processed)
-			if result != nil {
-				return result
+		path = path[end:]
+
+		if len(path) == 0 {
+			return wildcardNode.handler
+		}
+
+		if len(wildcardNode.childNodes) != 0 {
+			if wildcardNode.childNodes[0].nodeType == PathVariableNode {
+				return tree.search(nil, wildcardNode.childNodes[0].wildCardNode, path)
+			} else {
+				return tree.search(wildcardNode.childNodes[0], wildcardNode.childNodes[0].wildCardNode, path)
 			}
 		}
-
-	} else if node.nodeType == PathVariableNode {
-		tempIndex := index
-		for ; index < len(path) && path[index] != '/'; index++ {
-		}
-
-		processed += index - tempIndex
-		if len(node.childNodes) != 0 {
-			result := tree.search(node.childNodes[0], index, path, processed)
-			if result != nil {
-				return result
-			}
-		} else {
-			goto search
-		}
-
 	}
 	return nil
 }
@@ -102,7 +67,7 @@ func (tree *RouterTree) GetMethodNode(method RequestMethod) *RouterMethodNode {
 	return methodNode
 }
 
-func (tree *RouterTree) AddHandlerMethod(path string, method RequestMethod, handler RequestHandlerFunc) {
+func (tree *RouterTree) AddHandlerMethod(path string, method RequestMethod, handler *HandlerMethod) {
 	methodNode := tree.GetMethodNode(method)
 	methodNode.AddRoute(path, handler)
 }

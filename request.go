@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-type RequestHandlerFunc = interface{}
+type RequestHandlerFunc = func(context RequestContext) (*ResponseEntity, error)
 type RequestHandlerOption func(handler *RequestHandler)
 
 type RequestMethod string

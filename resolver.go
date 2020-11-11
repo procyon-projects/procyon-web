@@ -1,16 +1,6 @@
 package web
 
-import (
-	"encoding/json"
-	"github.com/codnect/goo"
-	"github.com/procyon-projects/procyon-context"
-	"github.com/procyon-projects/procyon-core"
-	"net/http"
-	"reflect"
-	"strings"
-	"sync"
-)
-
+/*
 type HandlerMethodParameterResolver interface {
 	SupportsParameter(parameter HandlerMethodParameter, requestContext RequestContext) bool
 	ResolveParameter(parameter HandlerMethodParameter, requestContext RequestContext, request *http.Request) (interface{}, error)
@@ -30,6 +20,10 @@ func NewHandlerMethodParameterResolvers() *HandlerMethodParameterResolvers {
 }
 
 func (parameterResolvers *HandlerMethodParameterResolvers) SupportsParameter(parameter HandlerMethodParameter, requestContext RequestContext, request *http.Request) bool {
+	if parameter.index == 0 {
+		return true
+	}
+
 	var cacheResolver HandlerMethodParameterResolver
 	parameterResolvers.cacheMutex.Lock()
 	cacheResolver = parameterResolvers.parameterResolverCache[parameter.HashCode()]
@@ -37,6 +31,7 @@ func (parameterResolvers *HandlerMethodParameterResolvers) SupportsParameter(par
 	if cacheResolver != nil {
 		return true
 	}
+
 	resolvers := parameterResolvers.resolvers
 	for _, resolver := range resolvers {
 		if resolver.SupportsParameter(parameter, requestContext) {
@@ -50,6 +45,10 @@ func (parameterResolvers *HandlerMethodParameterResolvers) SupportsParameter(par
 }
 
 func (parameterResolvers *HandlerMethodParameterResolvers) ResolveParameter(parameter HandlerMethodParameter, requestContext RequestContext, request *http.Request) (interface{}, error) {
+	if parameter.index == 0 {
+		return requestContext, nil
+	}
+
 	resolver := parameterResolvers.findParameterResolver(parameter, requestContext)
 	if resolver == nil {
 		return nil, NewNoHandlerParameterResolverError("Parameter resolver not found")
@@ -59,12 +58,14 @@ func (parameterResolvers *HandlerMethodParameterResolvers) ResolveParameter(para
 
 func (parameterResolvers *HandlerMethodParameterResolvers) findParameterResolver(parameter HandlerMethodParameter, requestContext RequestContext) HandlerMethodParameterResolver {
 	var cacheResolver HandlerMethodParameterResolver
+
 	parameterResolvers.cacheMutex.Lock()
 	cacheResolver = parameterResolvers.parameterResolverCache[parameter.HashCode()]
 	parameterResolvers.cacheMutex.Unlock()
 	if cacheResolver != nil {
 		return cacheResolver
 	}
+
 	resolvers := parameterResolvers.resolvers
 	for _, resolver := range resolvers {
 		if resolver.SupportsParameter(parameter, requestContext) {
@@ -74,6 +75,7 @@ func (parameterResolvers *HandlerMethodParameterResolvers) findParameterResolver
 			return resolver
 		}
 	}
+
 	return nil
 }
 
@@ -100,9 +102,9 @@ func (resolver ContextMethodParameterResolver) SupportsParameter(parameter Handl
 }
 
 func (resolver ContextMethodParameterResolver) ResolveParameter(parameter HandlerMethodParameter, requestContext RequestContext, request *http.Request) (interface{}, error) {
-	/*if requestContext.HasAttribute(ApplicationContextAttribute) {
+	if requestContext.HasAttribute(ApplicationContextAttribute) {
 		return request.GetAttribute(ApplicationContextAttribute).(context.Context), nil
-	}*/
+	}
 	return requestContext, nil
 }
 
@@ -156,7 +158,7 @@ func (resolver RequestMethodParameterResolver) SupportsParameter(parameter Handl
 
 func (resolver RequestMethodParameterResolver) ResolveParameter(parameter HandlerMethodParameter, requestContext RequestContext, request *http.Request) (interface{}, error) {
 	if !resolver.SupportsParameter(parameter, requestContext) {
-		return nil, nil /* todo */
+		return nil, nil
 	}
 
 	var fields []goo.Field
@@ -269,3 +271,4 @@ func (resolver RequestMethodParameterResolver) bindField(parentInstance interfac
 		field.SetValue(parentInstance, result)
 	}
 }
+*/

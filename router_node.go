@@ -11,17 +11,22 @@ const PathSegmentNode RouterNodeType = 0
 const PathVariableNode RouterNodeType = 1
 
 type RouterPathNode struct {
+	variableNode      bool
 	nodeType          RouterNodeType
 	path              string
 	fullPath          string
-	handler           RequestHandlerFunc
+	handler           *HandlerMethod
 	childNodes        []*RouterPathNode
 	indices           string
 	pathVariableNames []string
 	pathVariableRegex []*regexp.Regexp
+	parentNode        *RouterPathNode
+	wildCardNode      *RouterPathNode
+	hasWildcard       bool
+	hasChildNode      bool
 }
 
-func (node *RouterPathNode) AddChildNode(path string, fullPath string, handler RequestHandlerFunc) {
+func (node *RouterPathNode) AddChildNode(path string, fullPath string, handler *HandlerMethod) {
 
 	fullPathIndex := 0
 	startIndex := 0
@@ -87,6 +92,10 @@ visit:
 						fullPath:          node.fullPath,
 						pathVariableNames: node.pathVariableNames,
 						pathVariableRegex: node.pathVariableRegex,
+						wildCardNode:      node.wildCardNode,
+						hasWildcard:       node.hasWildcard,
+						hasChildNode:      node.hasChildNode,
+						parentNode:        node.parentNode,
 					}
 					node.childNodes = []*RouterPathNode{newNode}
 					node.indices = string([]byte{node.path[matchIndex]})
@@ -94,6 +103,10 @@ visit:
 					node.handler = nil
 					node.pathVariableNames = nil
 					node.pathVariableRegex = nil
+					node.wildCardNode = nil
+					node.hasWildcard = false
+					node.hasChildNode = false
+					node.parentNode = nil
 					node.fullPath = sanitizePath(fullPath[:fullPathIndex+matchIndex])
 					startIndex += matchIndex
 					fullPathIndex += len(node.path)
@@ -144,7 +157,10 @@ visit:
 					path = path[tempEndIndex:]
 
 					node.indices += string([]byte{character})
+					node.indices = updateIndices(node.indices)
 					node.childNodes = append(node.childNodes, pathSegmentNode)
+					pathSegmentNode.parentNode = node
+					node.hasChildNode = true
 					node = pathSegmentNode
 					continue
 				} else {
@@ -153,16 +169,21 @@ visit:
 					pathVariableRegex = append(pathVariableRegex, regex)
 
 					variableNode := &RouterPathNode{
-						nodeType: PathVariableNode,
-						path:     sanitizePath(path[:processed]),
-						fullPath: sanitizePath(fullPath[:fullPathIndex+processed]),
+						variableNode: true,
+						nodeType:     PathVariableNode,
+						path:         sanitizePath(path[:processed]),
+						fullPath:     sanitizePath(fullPath[:fullPathIndex+processed]),
 					}
 					startIndex += processed
 					path = path[processed:]
 					fullPathIndex += processed
 
 					node.indices += string([]byte{'*'})
+					node.wildCardNode = variableNode
+					node.hasWildcard = true
 					node.childNodes = append(node.childNodes, variableNode)
+					variableNode.parentNode = node
+					node.hasChildNode = true
 					node = variableNode
 					continue
 				}
@@ -237,7 +258,7 @@ type RouterMethodNode struct {
 	registeredRoutes []string
 }
 
-func (methodNode *RouterMethodNode) AddRoute(path string, handler RequestHandlerFunc) {
+func (methodNode *RouterMethodNode) AddRoute(path string, handler *HandlerMethod) {
 	if methodNode.root == nil {
 		rootNode := &RouterPathNode{
 			path:     "/",
@@ -250,6 +271,25 @@ func (methodNode *RouterMethodNode) AddRoute(path string, handler RequestHandler
 		methodNode.root.AddChildNode(path, path, handler)
 	}
 	methodNode.registeredRoutes = append(methodNode.registeredRoutes, path)
+}
+
+func updateIndices(indices string) string {
+	if indices == "" {
+		return ""
+	}
+	result := ""
+	hasWildcard := false
+	for index := 0; index < len(indices); index++ {
+		if indices[index] == '*' {
+			hasWildcard = true
+		} else {
+			result = result + string(indices[index])
+		}
+	}
+	if hasWildcard {
+		result = result + "*"
+	}
+	return result
 }
 
 func splitRoute(c rune) bool {

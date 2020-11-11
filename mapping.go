@@ -49,21 +49,24 @@ func (mappingInfo RequestMapping) hashCode() int {
 
 type MappingRegistry interface {
 	Register(handlerName string, mapping interface{}, fun RequestHandlerFunc) error
-	GetMappings() map[interface{}]HandlerMethod
+	GetMappings() map[interface{}]*HandlerMethod
 	FindMappingsByUrl(path string) ([]interface{}, bool)
+	Find(path string, method RequestMethod) *HandlerMethod
 }
 
 type RequestMappingRegistry struct {
+	routerTree            *RouterTree
 	mappingHashcodeLookup map[int]bool
-	mappingLookup         map[interface{}]HandlerMethod
+	mappingLookup         map[interface{}]*HandlerMethod
 	mappingUrlLookup      map[string][]interface{}
 	mu                    sync.RWMutex
 }
 
 func NewRequestMappingRegistry() RequestMappingRegistry {
 	return RequestMappingRegistry{
+		routerTree:            newRouterTree(),
 		mappingHashcodeLookup: make(map[int]bool),
-		mappingLookup:         make(map[interface{}]HandlerMethod),
+		mappingLookup:         make(map[interface{}]*HandlerMethod),
 		mappingUrlLookup:      make(map[string][]interface{}),
 		mu:                    sync.RWMutex{},
 	}
@@ -72,6 +75,8 @@ func NewRequestMappingRegistry() RequestMappingRegistry {
 func (registry RequestMappingRegistry) Register(handlerName string, mapping interface{}, fun RequestHandlerFunc) error {
 	registry.mu.Lock()
 	requestMapping := mapping.(*RequestMapping)
+
+	registry.routerTree.AddHandlerMethod(requestMapping.patternRequestMatcher.patterns[0], requestMapping.methodRequestMatcher.methods[0], NewSimpleHandlerMethod(fun))
 	if _, ok := registry.mappingHashcodeLookup[requestMapping.hashCode()]; ok {
 		registry.mu.Unlock()
 		return errors.New("ambiguous handler mapping. there is already an mapping :" + handlerName)
@@ -83,7 +88,7 @@ func (registry RequestMappingRegistry) Register(handlerName string, mapping inte
 	return nil
 }
 
-func (registry RequestMappingRegistry) GetMappings() map[interface{}]HandlerMethod {
+func (registry RequestMappingRegistry) GetMappings() map[interface{}]*HandlerMethod {
 	return registry.mappingLookup
 }
 
@@ -92,6 +97,10 @@ func (registry RequestMappingRegistry) FindMappingsByUrl(path string) ([]interfa
 		return mappings, true
 	}
 	return nil, false
+}
+
+func (registry RequestMappingRegistry) Find(path string, method RequestMethod) *HandlerMethod {
+	return registry.routerTree.GetHandlerMethod(path, method)
 }
 
 func (registry RequestMappingRegistry) findPurePaths(mapping *RequestMapping) {
@@ -120,7 +129,7 @@ func (registry RequestMappingRegistry) isPatternPath(path string) bool {
 
 type HandlerMapping interface {
 	RegisterHandlerMethod(handlerName string, mapping interface{}, fun RequestHandlerFunc)
-	GetHandler(requestContext RequestContext, req *http.Request) HandlerMethod
+	GetHandler(requestContext RequestContext, req *http.Request) *HandlerMethod
 }
 
 type RequestHandlerMapping struct {
@@ -140,12 +149,15 @@ func (requestMapping RequestHandlerMapping) RegisterHandlerMethod(handlerName st
 	requestMapping.mappingRegistry.Register(handlerName, mapping, fun)
 }
 
-func (requestMapping RequestHandlerMapping) GetHandler(requestContext RequestContext, req *http.Request) HandlerMethod {
+func (requestMapping RequestHandlerMapping) GetHandler(requestContext RequestContext, req *http.Request) *HandlerMethod {
+
 	return requestMapping.lookupHandlerMethod(requestContext, req)
 }
 
-func (requestMapping RequestHandlerMapping) lookupHandlerMethod(requestContext RequestContext, req *http.Request) HandlerMethod {
-	directPathMappings, ok := requestMapping.mappingRegistry.FindMappingsByUrl(req.URL.Path)
+func (requestMapping RequestHandlerMapping) lookupHandlerMethod(requestContext RequestContext, req *http.Request) *HandlerMethod {
+	return requestMapping.mappingRegistry.Find(req.URL.Path, RequestMethodGet)
+
+	/*directPathMappings, ok := requestMapping.mappingRegistry.FindMappingsByUrl(req.URL.Path)
 	if ok {
 		_, handlerMethod := requestMapping.getRequestMatches(requestContext, req, directPathMappings)
 		return handlerMethod
@@ -153,11 +165,11 @@ func (requestMapping RequestHandlerMapping) lookupHandlerMethod(requestContext R
 	requestMatch, handlerMethod := requestMapping.scanRequestMatches(requestContext, req)
 	if requestMatch != nil {
 		return handlerMethod
-	}
+	}*/
 	return nil
 }
 
-func (requestMapping RequestHandlerMapping) getRequestMatches(requestContext RequestContext, req *http.Request, mappings []interface{}) (*RequestMapping, HandlerMethod) {
+func (requestMapping RequestHandlerMapping) getRequestMatches(requestContext RequestContext, req *http.Request, mappings []interface{}) (*RequestMapping, *HandlerMethod) {
 	for _, mapping := range mappings {
 		if mapping.(*RequestMapping).MatchRequest(requestContext, req) {
 			handlerMethod := requestMapping.mappingRegistry.GetMappings()[mapping]
@@ -167,7 +179,7 @@ func (requestMapping RequestHandlerMapping) getRequestMatches(requestContext Req
 	return nil, nil
 }
 
-func (requestMapping RequestHandlerMapping) scanRequestMatches(requestContext RequestContext, req *http.Request) (*RequestMapping, HandlerMethod) {
+func (requestMapping RequestHandlerMapping) scanRequestMatches(requestContext RequestContext, req *http.Request) (*RequestMapping, *HandlerMethod) {
 	for mapping, handlerMethod := range requestMapping.mappingRegistry.GetMappings() {
 		if mapping.(*RequestMapping).MatchRequest(requestContext, req) {
 			return mapping.(*RequestMapping), handlerMethod

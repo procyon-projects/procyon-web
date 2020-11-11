@@ -5,6 +5,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/procyon-projects/procyon-configure"
 	"github.com/procyon-projects/procyon-context"
+	"net/http"
+	"net/url"
 	"strconv"
 )
 
@@ -15,67 +17,73 @@ type PathVariable struct {
 
 type RequestContext interface {
 	context.Context
-	AddAttribute(key string, val interface{})
-	HasAttribute(key string) bool
-	GetAttribute(key string) interface{}
+	GetHeaderValue(key string) string
 	GetPathVariables() []PathVariable
+	GetPathVariable(name string) (string, bool)
+	GetRequestParameter(name string) string
+	GetRequestData() interface{}
 }
 
 type WebRequestContext struct {
-	contextId     uuid.UUID
-	attributes    map[string]interface{}
-	pathVariables []PathVariable
+	hasContextId      bool
+	contextId         uuid.UUID
+	request           *http.Request
+	header            http.Header
+	requestParamCache url.Values
+	pathVariables     []PathVariable
+	formCache         url.Values
+	requestData       interface{}
 }
 
 func newWebRequestContext() interface{} {
-	return &WebRequestContext{
-		attributes:    make(map[string]interface{}),
-		pathVariables: make([]PathVariable, 0),
+	return &WebRequestContext{}
+}
+
+func (context *WebRequestContext) reset() {
+	if !context.hasContextId {
+		context.contextId, _ = uuid.NewUUID()
 	}
+	context.request = nil
+	context.header = nil
+	context.pathVariables = context.pathVariables[0:0]
+	context.requestParamCache = nil
+	context.formCache = nil
+	context.requestData = nil
 }
 
-func (context WebRequestContext) GetAppId() uuid.UUID {
-	return uuid.UUID{}
-}
-
-func (context WebRequestContext) GetContextId() uuid.UUID {
+func (context *WebRequestContext) GetContextId() uuid.UUID {
 	return context.contextId
 }
 
-func (context WebRequestContext) GetApplicationName() string {
-	return ""
-}
-
-func (context WebRequestContext) GetStartupTimestamp() int64 {
-	return 0
-}
-
-func (context WebRequestContext) AddAttribute(key string, val interface{}) {
-	context.attributes[key] = val
-}
-
-func (context WebRequestContext) HasAttribute(key string) bool {
-	if _, ok := context.attributes[key]; ok {
-		return true
+func (context *WebRequestContext) GetHeaderValue(key string) string {
+	if context.header == nil {
+		context.header = context.request.Header
 	}
-	return false
+	return context.header.Get(key)
 }
 
-func (context WebRequestContext) GetAttribute(key string) interface{} {
-	if value, ok := context.attributes[key]; ok {
-		return value
-	}
-	return nil
-}
-
-func (context WebRequestContext) GetPathVariables() []PathVariable {
+func (context *WebRequestContext) GetPathVariables() []PathVariable {
 	return context.pathVariables
 }
 
-func (context WebRequestContext) clear() {
-	for key, _ := range context.attributes {
-		delete(context.attributes, key)
+func (context *WebRequestContext) GetPathVariable(name string) (string, bool) {
+	for _, variable := range context.pathVariables {
+		if variable.Key == name {
+			return variable.Value, true
+		}
 	}
+	return "", false
+}
+
+func (context *WebRequestContext) GetRequestParameter(name string) string {
+	if context.requestParamCache == nil {
+		context.requestParamCache = context.request.URL.Query()
+	}
+	return context.requestParamCache.Get(name)
+}
+
+func (context *WebRequestContext) GetRequestData() interface{} {
+	return context.requestData
 }
 
 type WebApplicationContext interface {

@@ -1,12 +1,9 @@
 package web
 
-import (
-	"github.com/codnect/goo"
-)
-
+/*
 type HandlerMethodReturnValueHandler interface {
 	SupportsReturnType(returnValueType HandlerMethodReturnValue) bool
-	HandleReturnValue(returnValues []interface{}, returnValueParameter HandlerMethodReturnValue, request HttpRequest) (interface{}, error)
+	HandleReturnValue(returnValues []interface{}, returnValueParameter HandlerMethodReturnValue, request *http.Request) (interface{}, error)
 }
 
 type HandlerMethodReturnValueHandlers struct {
@@ -28,7 +25,7 @@ func (h *HandlerMethodReturnValueHandlers) SupportsReturnType(returnValueType Ha
 	return false
 }
 
-func (h *HandlerMethodReturnValueHandlers) HandleReturnValue(returnValues []interface{}, returnValueParameter HandlerMethodReturnValue, request HttpRequest) (interface{}, error) {
+func (h *HandlerMethodReturnValueHandlers) HandleReturnValue(returnValues []interface{}, returnValueParameter HandlerMethodReturnValue, request *http.Request) (interface{}, error) {
 	handler := h.findReturnValueHandler(returnValueParameter)
 	if handler == nil {
 		return nil, NewNoHandlerParameterResolverError("Return value handler not found")
@@ -63,8 +60,7 @@ func (h ResponseEntityReturnValueHandler) SupportsReturnType(returnValueType Han
 	return false
 }
 
-func (h ResponseEntityReturnValueHandler) HandleReturnValue(returnValues []interface{}, returnValueParameter HandlerMethodReturnValue, request HttpRequest) (interface{}, error) {
-	/* TODO it will be completed */
+func (h ResponseEntityReturnValueHandler) HandleReturnValue(returnValues []interface{}, returnValueParameter HandlerMethodReturnValue, request *http.Request) (interface{}, error) {
 	return nil, nil
 }
 
@@ -82,7 +78,7 @@ func (h ErrorReturnValueHandler) SupportsReturnType(returnValueType HandlerMetho
 	return false
 }
 
-func (h ErrorReturnValueHandler) HandleReturnValue(returnValues []interface{}, returnValueParameter HandlerMethodReturnValue, request HttpRequest) (interface{}, error) {
-	/* TODO it will be completed */
+func (h ErrorReturnValueHandler) HandleReturnValue(returnValues []interface{}, returnValueParameter HandlerMethodReturnValue, request *http.Request) (interface{}, error) {
 	return nil, nil
 }
+*/
