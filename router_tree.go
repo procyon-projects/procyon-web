@@ -77,15 +77,11 @@ func (methodTree *RouterMethodTree) add(path []byte, chain *HandlerChain) {
 					}
 				}
 
-				// No fitting children found, does this node even contain a prefix yet?
-				// If no prefix is set, this is the starting node.
 				if len(node.path) == 0 {
 					node.handlePathSegment(path[index:], chain)
 					break
 				}
 
-				// node: /user/|:id
-				// path: /user/|:id/profile
 				if node.pathVariableNode != nil {
 					node = node.pathVariableNode
 					processed = index
@@ -97,9 +93,6 @@ func (methodTree *RouterMethodTree) add(path []byte, chain *HandlerChain) {
 			}
 		} else {
 			if index == len(path) {
-				// The path ended but the node prefix is longer.
-				// node: /blog|feed
-				// path: /blog|
 				tempIndex := index - processed
 				splitNode := &RouterPathNode{
 					path:                node.path[tempIndex:],
@@ -138,9 +131,6 @@ func (methodTree *RouterMethodTree) add(path []byte, chain *HandlerChain) {
 				break
 			}
 
-			// The node we just checked is entirely included in our path.
-			// node: /|
-			// path: /|blog
 			if index-processed == len(node.path) {
 
 				if char >= node.childStartIndex && char < node.childEndIndex {
@@ -154,15 +144,11 @@ func (methodTree *RouterMethodTree) add(path []byte, chain *HandlerChain) {
 					}
 				}
 
-				// No fitting children found, does this node even contain a prefix yet?
-				// If no prefix is set, this is the starting node.
 				if len(node.path) == 0 {
 					node.handlePathSegment(path[index:], chain)
 					break
 				}
 
-				// node: /user/|:id
-				// path: /user/|:id/profile
 				if node.pathVariableNode != nil {
 					node = node.pathVariableNode
 					processed = index
@@ -173,9 +159,6 @@ func (methodTree *RouterMethodTree) add(path []byte, chain *HandlerChain) {
 				break
 			}
 
-			// We got a conflict.
-			// node: /b|ag
-			// path: /b|riefcase
 			tempIndex := index - processed
 			if path[index] != node.path[index-processed] {
 				splitNode := &RouterPathNode{
