@@ -10,7 +10,21 @@ type RouterTree struct {
 }
 
 func newRouterTree() *RouterTree {
-	return &RouterTree{}
+	router := &RouterTree{}
+	router.createMethodTree([]byte(RequestMethodGet))
+	router.createMethodTree([]byte(RequestMethodPost))
+	router.createMethodTree([]byte(RequestMethodPut))
+	router.createMethodTree([]byte(RequestMethodPatch))
+	router.createMethodTree([]byte(RequestMethodDelete))
+	router.createMethodTree([]byte(RequestMethodHead))
+	router.createMethodTree([]byte(RequestMethodDelete))
+	return router
+}
+
+func (tree *RouterTree) createMethodTree(method []byte) {
+	methodTree := new(RouterMethodTree)
+	methodTree.method = method
+	tree.methodTrees = append(tree.methodTrees, methodTree)
 }
 
 func (tree *RouterTree) GetMethodTree(method []byte) *RouterMethodTree {
@@ -37,7 +51,7 @@ func (tree *RouterTree) Get(ctx *WebRequestContext) {
 	if ctx.fastHttpRequestContext.Method()[0] == 'G' {
 		tree.methodTrees[0].findHandler(ctx)
 	} else {
-		methodNode := tree.methodTrees[0]
+		methodNode := tree.GetMethodTree(ctx.fastHttpRequestContext.Method())
 		methodNode.findHandler(ctx)
 	}
 }
