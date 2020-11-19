@@ -7,7 +7,6 @@ import (
 	core "github.com/procyon-projects/procyon-core"
 	"github.com/valyala/fasthttp"
 	"strconv"
-	"unsafe"
 )
 
 type ProcyonServerApplicationContext struct {
@@ -83,7 +82,7 @@ func newWebRequestContext() interface{} {
 }
 
 func (ctx *WebRequestContext) GetContextId() context.ContextId {
-	return *(*context.ContextId)(unsafe.Pointer(&ctx.contextIdStr))
+	return context.ContextId(ctx.contextIdStr)
 }
 
 func (ctx *WebRequestContext) reset() {
