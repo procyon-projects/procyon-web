@@ -48,9 +48,9 @@ func (server *ProcyonWebServer) GetPort() int {
 	return port
 }
 
-func newProcyonWebServer(context WebApplicationContext) (Server, error) {
+func newProcyonWebServer(ctx context.ApplicationContext) (Server, error) {
 	server := &ProcyonWebServer{
-		router: NewProcyonRouter(context.(ConfigurableWebApplicationContext)),
+		router: NewProcyonRouter(ctx.(context.ConfigurableApplicationContext)),
 	}
 	return server, nil
 }
@@ -61,7 +61,7 @@ func NewProcyonWebServerForBenchmark(handlerRegistry SimpleHandlerRegistry) *Pro
 	ctx := NewProcyonServerApplicationContext(context.ApplicationId(appId.String()), context.ContextId(contextId.String()))
 
 	server := &ProcyonWebServer{
-		router: NewProcyonRouterForBenchmark(ctx.BaseWebApplicationContext, handlerRegistry),
+		router: NewProcyonRouterForBenchmark(ctx.BaseApplicationContext, handlerRegistry),
 	}
 	return server
 }

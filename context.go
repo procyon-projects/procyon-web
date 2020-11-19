@@ -2,12 +2,58 @@ package web
 
 import (
 	"github.com/codnect/goo"
-	"github.com/procyon-projects/procyon-configure"
+	configure "github.com/procyon-projects/procyon-configure"
 	"github.com/procyon-projects/procyon-context"
 	core "github.com/procyon-projects/procyon-core"
 	"github.com/valyala/fasthttp"
 	"strconv"
 )
+
+type ProcyonServerApplicationContext struct {
+	*context.BaseApplicationContext
+	server Server
+}
+
+func NewProcyonServerApplicationContext(appId context.ApplicationId, contextId context.ContextId) *ProcyonServerApplicationContext {
+	ctx := &ProcyonServerApplicationContext{}
+	applicationContext := context.NewBaseApplicationContext(appId, contextId, ctx)
+	ctx.BaseApplicationContext = applicationContext
+	return ctx
+}
+
+func (ctx *ProcyonServerApplicationContext) GetWebServer() Server {
+	return ctx.server
+}
+
+func (ctx *ProcyonServerApplicationContext) Configure() {
+	ctx.BaseApplicationContext.Configure()
+}
+
+func (ctx *ProcyonServerApplicationContext) OnConfigure() {
+	_ = ctx.createWebServer()
+}
+
+func (ctx *ProcyonServerApplicationContext) FinishConfigure() {
+	logger := ctx.GetLogger()
+	startedChannel := make(chan bool, 1)
+	go func() {
+		serverProperties := ctx.GetSharedPeaType(goo.GetType((*configure.WebServerProperties)(nil)))
+		ctx.server.SetProperties(serverProperties.(*configure.WebServerProperties))
+		logger.Info(ctx, "Procyon started on port(s): "+strconv.Itoa(ctx.GetWebServer().GetPort()))
+		startedChannel <- true
+		ctx.server.Run()
+	}()
+	<-startedChannel
+}
+
+func (ctx *ProcyonServerApplicationContext) createWebServer() error {
+	server, err := newProcyonWebServer(ctx.BaseApplicationContext)
+	if err != nil {
+		return err
+	}
+	ctx.server = server
+	return nil
+}
 
 type PathVariable struct {
 	Key   string
@@ -16,7 +62,7 @@ type PathVariable struct {
 
 type WebRequestContext struct {
 	contextIdBuffer        [36]byte
-	contextStr             string
+	contextIdStr           string
 	handlerChain           *HandlerChain
 	fastHttpRequestContext *fasthttp.RequestCtx
 	pathVariables          [20]string
@@ -48,7 +94,7 @@ func (ctx *WebRequestContext) reset() {
 
 func (ctx *WebRequestContext) prepare() {
 	core.GenerateUUID(ctx.contextIdBuffer[:])
-	ctx.contextStr = bytesToStr(ctx.contextIdBuffer[:])
+	ctx.contextIdStr = bytesToStr(ctx.contextIdBuffer[:])
 }
 
 func (ctx *WebRequestContext) Next() {
@@ -105,83 +151,4 @@ func (ctx *WebRequestContext) GetRequestParameter(name string) string {
 
 func (ctx *WebRequestContext) GetRequestData() interface{} {
 	return nil
-}
-
-type WebApplicationContext interface {
-	context.ApplicationContext
-}
-
-type ConfigurableWebApplicationContext interface {
-	WebApplicationContext
-	context.ConfigurableContext
-}
-
-type BaseWebApplicationContext struct {
-	*context.BaseApplicationContext
-}
-
-func NewBaseWebApplicationContext(appId context.ApplicationId, contextId context.ContextId, configurableContextAdapter context.ConfigurableContextAdapter) *BaseWebApplicationContext {
-	return &BaseWebApplicationContext{
-		context.NewBaseApplicationContext(appId, contextId, configurableContextAdapter),
-	}
-}
-
-type ServerApplicationContext interface {
-	context.ApplicationContext
-	GetWebServer() Server
-}
-
-type ConfigurableServerApplicationContext interface {
-	ServerApplicationContext
-	context.ConfigurableContext
-}
-
-type ProcyonServerApplicationContext struct {
-	*BaseWebApplicationContext
-	server Server
-}
-
-func NewProcyonServerApplicationContext(appId context.ApplicationId, contextId context.ContextId) *ProcyonServerApplicationContext {
-	ctx := &ProcyonServerApplicationContext{}
-	genericCtx := NewBaseWebApplicationContext(appId, contextId, ctx)
-	ctx.BaseWebApplicationContext = genericCtx
-	return ctx
-}
-
-func (ctx *ProcyonServerApplicationContext) GetWebServer() Server {
-	return ctx.server
-}
-
-func (ctx *ProcyonServerApplicationContext) Configure() {
-	ctx.BaseWebApplicationContext.BaseApplicationContext.Configure()
-}
-
-func (ctx *ProcyonServerApplicationContext) OnConfigure() {
-	_ = ctx.createWebServer()
-}
-
-func (ctx *ProcyonServerApplicationContext) FinishConfigure() {
-	logger := ctx.GetLogger()
-	startedChannel := make(chan bool, 1)
-	go func() {
-		serverProperties := ctx.GetSharedPeaType(goo.GetType((*configure.WebServerProperties)(nil)))
-		ctx.server.SetProperties(serverProperties.(*configure.WebServerProperties))
-		logger.Info(ctx, "Procyon started on port(s): "+strconv.Itoa(ctx.GetWebServer().GetPort()))
-		startedChannel <- true
-		ctx.server.Run()
-	}()
-	<-startedChannel
-}
-
-func (ctx *ProcyonServerApplicationContext) createWebServer() error {
-	server, err := newProcyonWebServer(ctx.BaseWebApplicationContext)
-	if err != nil {
-		return err
-	}
-	ctx.server = server
-	return nil
-}
-
-func (ctx *ProcyonServerApplicationContext) cloneApplicationContext() {
-
 }

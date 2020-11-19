@@ -21,26 +21,6 @@ const (
 	RequestMethodHead    RequestMethod = http.MethodHead
 )
 
-func GetRequestMethod(method string) RequestMethod {
-	switch method {
-	case http.MethodGet:
-		return RequestMethodGet
-	case http.MethodPost:
-		return RequestMethodPost
-	case http.MethodPut:
-		return RequestMethodPut
-	case http.MethodDelete:
-		return RequestMethodDelete
-	case http.MethodPatch:
-		return RequestMethodPatch
-	case http.MethodOptions:
-		return RequestMethodOptions
-	case http.MethodHead:
-		return RequestMethodHead
-	}
-	return unknownMethod
-}
-
 type RequestHandler struct {
 	Path        string
 	Methods     []RequestMethod
