@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-type RequestHandlerFunc = func(context RequestContext) (*ResponseEntity, error)
+type RequestHandlerFunction = func(context *WebRequestContext)
 type RequestHandlerOption func(handler *RequestHandler)
 
 type RequestMethod string
@@ -42,12 +42,12 @@ func GetRequestMethod(method string) RequestMethod {
 }
 
 type RequestHandler struct {
-	Paths       []string
+	Path        string
 	Methods     []RequestMethod
-	HandlerFunc RequestHandlerFunc
+	HandlerFunc RequestHandlerFunction
 }
 
-func NewHandler(handler RequestHandlerFunc, options ...RequestHandlerOption) RequestHandler {
+func NewHandler(handler RequestHandlerFunction, options ...RequestHandlerOption) RequestHandler {
 	if handler == nil {
 		panic("Handler must not be null")
 	}
@@ -64,15 +64,12 @@ func NewHandler(handler RequestHandlerFunc, options ...RequestHandlerOption) Req
 	if len(handlerMethod.Methods) == 0 {
 		handlerMethod.Methods = []RequestMethod{RequestMethodGet}
 	}
-	if len(handlerMethod.Paths) == 0 {
-		handlerMethod.Paths = []string{""}
-	}
 	return *handlerMethod
 }
 
-func WithPath(paths ...string) RequestHandlerOption {
+func WithPath(path string) RequestHandlerOption {
 	return func(handler *RequestHandler) {
-		handler.Paths = paths
+		handler.Path = path
 	}
 }
 

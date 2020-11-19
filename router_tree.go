@@ -1,73 +1,315 @@
 package web
 
+import (
+	"bytes"
+	"unsafe"
+)
+
 type RouterTree struct {
-	methodNodes []*RouterMethodNode
+	methodTrees []*RouterMethodTree
 }
 
 func newRouterTree() *RouterTree {
-	return &RouterTree{
-		make([]*RouterMethodNode, 0),
+	return &RouterTree{}
+}
+
+func (tree *RouterTree) GetMethodTree(method []byte) *RouterMethodTree {
+	for _, methodTree := range tree.methodTrees {
+		if bytes.Equal(methodTree.method, method) {
+			return methodTree
+		}
+	}
+	methodTree := new(RouterMethodTree)
+	methodTree.method = method
+	tree.methodTrees = append(tree.methodTrees, methodTree)
+	return methodTree
+}
+
+func (tree *RouterTree) AddRoute(path string, method RequestMethod, handlerChain *HandlerChain) {
+	methodNode := tree.GetMethodTree([]byte(method))
+	if methodNode.root == nil {
+		methodNode.root = &RouterPathNode{}
+	}
+	methodNode.add([]byte(path), handlerChain)
+}
+
+func (tree *RouterTree) Get(ctx *WebRequestContext) {
+	if ctx.fastHttpRequestContext.Method()[0] == 'G' {
+		tree.methodTrees[0].findHandler(ctx)
+	} else {
+		methodNode := tree.methodTrees[0]
+		methodNode.findHandler(ctx)
 	}
 }
 
-func (tree *RouterTree) GetHandlerMethod(path string, method RequestMethod) *HandlerMethod {
-	methodNode := tree.GetMethodNode(method)
-	if methodNode == nil {
-		return nil
-	}
-	return tree.search(methodNode.root, methodNode.root.wildCardNode, path)
+type RouterMethodTree struct {
+	method           []byte
+	root             *RouterPathNode
+	registeredRoutes []string
 }
 
-func (tree *RouterTree) search(node *RouterPathNode, wildcardNode *RouterPathNode, path string) *HandlerMethod {
+func (methodTree *RouterMethodTree) add(path []byte, chain *HandlerChain) {
+	node := methodTree.root
+	index := 0
+	processed := 0
 
-	if len(path) == 0 {
-		return node.handler
-	}
+	for {
+	begin:
 
-	if node != nil {
-		path = path[len(node.path):]
-		for nodeIndex := 0; nodeIndex < len(node.indices); nodeIndex++ {
-			if path[0] == node.indices[nodeIndex] {
-				return tree.search(node.childNodes[nodeIndex], node.childNodes[nodeIndex].wildCardNode, path)
+		char := path[index]
+		if index == len(path) {
+			if node.nodeType == PathVariableNode || index-processed == len(node.path) {
+				panic("You have already registered the same path : " + string(path))
 			}
 		}
-	}
-	if wildcardNode != nil {
-		end := 0
-		for end < len(path) && path[end] != '/' {
-			end++
-		}
 
-		path = path[end:]
+		if node.nodeType == PathVariableNode {
 
-		if len(path) == 0 {
-			return wildcardNode.handler
-		}
+			if char == '/' {
+				if char >= node.childStartIndex && char < node.childEndIndex {
+					tempIndex := node.indices[char-node.childStartIndex]
 
-		if len(wildcardNode.childNodes) != 0 {
-			if wildcardNode.childNodes[0].nodeType == PathVariableNode {
-				return tree.search(nil, wildcardNode.childNodes[0].wildCardNode, path)
-			} else {
-				return tree.search(wildcardNode.childNodes[0], wildcardNode.childNodes[0].wildCardNode, path)
+					if tempIndex != 0 {
+						node = node.childNodes[tempIndex]
+						processed = index
+						index++
+						goto begin
+					}
+				}
+
+				// No fitting children found, does this node even contain a prefix yet?
+				// If no prefix is set, this is the starting node.
+				if len(node.path) == 0 {
+					node.handlePathSegment(path[index:], chain)
+					break
+				}
+
+				// node: /user/|:id
+				// path: /user/|:id/profile
+				if node.pathVariableNode != nil {
+					node = node.pathVariableNode
+					processed = index
+					goto begin
+				}
+
+				node.handlePathSegment(path[index:], chain)
+				break
+			}
+		} else {
+			if index == len(path) {
+				// The path ended but the node prefix is longer.
+				// node: /blog|feed
+				// path: /blog|
+				tempIndex := index - processed
+				splitNode := &RouterPathNode{
+					path:                node.path[tempIndex:],
+					length:              uint(len(node.path[tempIndex:])),
+					handlerChain:        node.handlerChain,
+					indices:             node.indices,
+					childStartIndex:     node.childStartIndex,
+					childEndIndex:       node.childEndIndex,
+					childIndex:          node.childIndex,
+					childNodes:          node.childNodes,
+					pathVariableNode:    node.pathVariableNode,
+					wildCardNode:        node.wildCardNode,
+					hasPathVariableNode: node.hasPathVariableNode,
+					hasWildcard:         node.hasWildcard,
+					nodeType:            node.nodeType,
+					childNode:           node.childNode,
+				}
+
+				node.nodeType = PathSegmentNode
+				node.path = node.path[:tempIndex]
+				node.length = uint(len(node.path[:tempIndex]))
+				node.handlerChain = nil
+				node.pathVariableNode = nil
+				node.wildCardNode = nil
+				node.hasWildcard = false
+				node.hasPathVariableNode = false
+				node.childStartIndex = 0
+				node.childEndIndex = 0
+				node.childIndex = 0
+				node.indices = nil
+				node.childNodes = nil
+				node.childNode = nil
+
+				node.handlerChain = chain
+				node.addChildNode(splitNode)
+				break
+			}
+
+			// The node we just checked is entirely included in our path.
+			// node: /|
+			// path: /|blog
+			if index-processed == len(node.path) {
+
+				if char >= node.childStartIndex && char < node.childEndIndex {
+					tempIndex := node.indices[char-node.childStartIndex]
+
+					if tempIndex != 0 {
+						node = node.childNodes[tempIndex]
+						processed = index
+						index++
+						goto begin
+					}
+				}
+
+				// No fitting children found, does this node even contain a prefix yet?
+				// If no prefix is set, this is the starting node.
+				if len(node.path) == 0 {
+					node.handlePathSegment(path[index:], chain)
+					break
+				}
+
+				// node: /user/|:id
+				// path: /user/|:id/profile
+				if node.pathVariableNode != nil {
+					node = node.pathVariableNode
+					processed = index
+					goto begin
+				}
+
+				node.handlePathSegment(path[index:], chain)
+				break
+			}
+
+			// We got a conflict.
+			// node: /b|ag
+			// path: /b|riefcase
+			tempIndex := index - processed
+			if path[index] != node.path[index-processed] {
+				splitNode := &RouterPathNode{
+					path:                node.path[tempIndex:],
+					length:              uint(len(node.path[tempIndex:])),
+					handlerChain:        node.handlerChain,
+					indices:             node.indices,
+					childStartIndex:     node.childStartIndex,
+					childEndIndex:       node.childEndIndex,
+					childIndex:          node.childIndex,
+					childNodes:          node.childNodes,
+					pathVariableNode:    node.pathVariableNode,
+					wildCardNode:        node.wildCardNode,
+					hasPathVariableNode: node.hasPathVariableNode,
+					hasWildcard:         node.hasWildcard,
+					nodeType:            node.nodeType,
+					childNode:           node.childNode,
+				}
+
+				node.nodeType = PathSegmentNode
+				node.path = node.path[:tempIndex]
+				node.length = uint(len(node.path[:tempIndex]))
+				node.handlerChain = nil
+				node.pathVariableNode = nil
+				node.wildCardNode = nil
+				node.hasWildcard = false
+				node.hasPathVariableNode = false
+				node.childStartIndex = 0
+				node.childEndIndex = 0
+				node.childIndex = 0
+				node.indices = nil
+				node.childNodes = nil
+				node.childNode = nil
+
+				if len(path[tempIndex:]) == 0 {
+					node.handlerChain = chain
+					node.addChildNode(splitNode)
+					break
+				}
+
+				node.addChildNode(splitNode)
+				node.handlePathSegment(path[tempIndex:], chain)
+				break
 			}
 		}
+		index++
 	}
-	return nil
 }
 
-func (tree *RouterTree) GetMethodNode(method RequestMethod) *RouterMethodNode {
-	for _, methodNode := range tree.methodNodes {
-		if methodNode.method == method {
-			return methodNode
+func (methodTree *RouterMethodTree) findHandler(ctx *WebRequestContext) {
+	node := methodTree.root
+	path := ctx.fastHttpRequestContext.URI().Path()
+	pathLength := uint(len(path))
+
+	var index uint
+	var processed uint
+
+	var lastWildcardNode *RouterPathNode
+	var lastWildcard uint
+	var existLastWildcard bool
+
+search:
+	for {
+
+		if index == pathLength {
+			if index-processed == node.length {
+				ctx.handlerChain = node.handlerChain
+			}
+			break
 		}
+
+		if index-processed == node.length {
+			if node.hasWildcard {
+				lastWildcardNode = node.wildCardNode
+				existLastWildcard = true
+				lastWildcard = index
+			}
+
+			character := path[index]
+
+			if character >= node.childStartIndex && character < node.childEndIndex {
+				childIndex := node.indices[character-node.childStartIndex]
+
+				if childIndex != 0 {
+					node = node.childNodes[childIndex]
+					processed = index
+					index++
+					continue search
+				}
+			}
+
+			if node.hasPathVariableNode {
+				node = node.pathVariableNode
+				processed = index
+				index++
+
+				for {
+					if index == pathLength {
+						ctx.addPathVariableValue(bytesToStr(path[processed:index]))
+						ctx.handlerChain = node.handlerChain
+						return
+					}
+
+					if path[index] == 47 {
+						ctx.addPathVariableValue(bytesToStr(path[processed:index]))
+						node = node.childNode
+						processed = index
+						index++
+						continue search
+					}
+
+					index++
+				}
+			}
+
+			if node.hasWildcard {
+				ctx.addPathVariableValue(bytesToStr(path[index:]))
+				ctx.handlerChain = node.wildCardNode.handlerChain
+			}
+			break
+		}
+
+		if path[index] != node.path[index-processed] {
+			if existLastWildcard {
+				ctx.addPathVariableValue(bytesToStr(path[lastWildcard:]))
+				ctx.handlerChain = lastWildcardNode.handlerChain
+			}
+			break
+		}
+
+		index++
 	}
-	methodNode := new(RouterMethodNode)
-	methodNode.method = method
-	tree.methodNodes = append(tree.methodNodes, methodNode)
-	return methodNode
 }
 
-func (tree *RouterTree) AddHandlerMethod(path string, method RequestMethod, handler *HandlerMethod) {
-	methodNode := tree.GetMethodNode(method)
-	methodNode.AddRoute(path, handler)
+func bytesToStr(bytes []byte) string {
+	return *(*string)(unsafe.Pointer(&bytes))
 }

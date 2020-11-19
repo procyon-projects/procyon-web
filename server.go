@@ -3,7 +3,8 @@ package web
 import (
 	"github.com/google/uuid"
 	"github.com/procyon-projects/procyon-configure"
-	"net/http"
+	"github.com/procyon-projects/procyon-context"
+	"github.com/valyala/fasthttp"
 	"strconv"
 )
 
@@ -26,7 +27,11 @@ func (server *ProcyonWebServer) SetProperties(properties *configure.WebServerPro
 }
 
 func (server *ProcyonWebServer) Run() error {
-	return http.ListenAndServe(":"+strconv.Itoa(server.GetPort()), server)
+	return fasthttp.ListenAndServe(":"+strconv.Itoa(server.GetPort()), server.handle)
+}
+
+func (server *ProcyonWebServer) handle(ctx *fasthttp.RequestCtx) {
+	server.router.Route(ctx)
 }
 
 func (server *ProcyonWebServer) Stop() error {
@@ -43,21 +48,6 @@ func (server *ProcyonWebServer) GetPort() int {
 	return port
 }
 
-func (server *ProcyonWebServer) ServeHTTP(response http.ResponseWriter, request *http.Request) {
-	switch request.Method {
-	case http.MethodGet:
-		server.router.DoGet(response, request)
-	case http.MethodPost:
-		server.router.DoPost(response, request)
-	case http.MethodPut:
-		server.router.DoPut(response, request)
-	case http.MethodDelete:
-		server.router.DoDelete(response, request)
-	case http.MethodPatch:
-		server.router.DoPatch(response, request)
-	}
-}
-
 func newProcyonWebServer(context WebApplicationContext) (Server, error) {
 	server := &ProcyonWebServer{
 		router: NewProcyonRouter(context.(ConfigurableWebApplicationContext)),
@@ -66,12 +56,12 @@ func newProcyonWebServer(context WebApplicationContext) (Server, error) {
 }
 
 func NewProcyonWebServerForBenchmark(handlerRegistry SimpleHandlerRegistry) *ProcyonWebServer {
-	appId, _ := uuid.NewUUID()
-	contextId, _ := uuid.NewUUID()
-	ctx := NewProcyonServerApplicationContext(appId, contextId)
+	appId := uuid.New()
+	contextId := uuid.New()
+	ctx := NewProcyonServerApplicationContext(context.ApplicationId(appId.String()), context.ContextId(contextId.String()))
 
 	server := &ProcyonWebServer{
-		router: newProcyonRouterForBenchmark(ctx.BaseWebApplicationContext, handlerRegistry),
+		router: NewProcyonRouterForBenchmark(ctx.BaseWebApplicationContext, handlerRegistry),
 	}
 	return server
 }

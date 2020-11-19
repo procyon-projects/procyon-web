@@ -1,13 +1,11 @@
 package web
 
 type RequestHandlerMappingProcessor struct {
-	pathMatcher           PathMatcher
 	requestHandlerMapping RequestHandlerMapping
 }
 
-func NewRequestHandlerMappingProcessor(pathMatcher PathMatcher, mapping RequestHandlerMapping) RequestHandlerMappingProcessor {
+func NewRequestHandlerMappingProcessor(mapping RequestHandlerMapping) RequestHandlerMappingProcessor {
 	return RequestHandlerMappingProcessor{
-		pathMatcher,
 		mapping,
 	}
 }
@@ -23,7 +21,7 @@ func (processor RequestHandlerMappingProcessor) BeforePeaInitialization(peaName 
 	if controller, ok := pea.(Controller); ok {
 		handlerRegistry := newSimpleHandlerRegistry()
 		controller.RegisterHandlers(handlerRegistry)
-		processor.processHandler(peaName, handlerRegistry)
+		processor.processHandler(handlerRegistry)
 	}
 	return pea, nil
 }
@@ -32,41 +30,16 @@ func (processor RequestHandlerMappingProcessor) AfterPeaInitialization(peaName s
 	return pea, nil
 }
 
-func (processor RequestHandlerMappingProcessor) processHandler(handlerName string, handlerRegistry HandlerRegistry) {
+func (processor RequestHandlerMappingProcessor) processHandler(handlerRegistry HandlerRegistry) {
 	if handlerRegistry == nil {
 		return
 	}
 	if simpleRegistry, ok := handlerRegistry.(SimpleHandlerRegistry); ok {
 		registryMap := simpleRegistry.getRegistryMap()
-		for prefix, handlers := range registryMap {
+		for _, handlers := range registryMap {
 			for _, handler := range handlers {
-				requestMappingInfo := processor.createRequestMapping(prefix, handler)
-				processor.requestHandlerMapping.RegisterHandlerMethod(handlerName, requestMappingInfo, handler.HandlerFunc)
+				processor.requestHandlerMapping.RegisterHandlerMethod("", "", handler.HandlerFunc)
 			}
 		}
 	}
-}
-
-func (processor RequestHandlerMappingProcessor) createRequestMapping(prefix string, handler RequestHandler) *RequestMapping {
-	return NewRequestMapping(newMethodRequestMatcher(handler.Methods),
-		newPatternRequestMatcher(processor.pathMatcher, prefix, handler.Paths),
-	)
-}
-
-type RequestMappingHandlerAdapterProcessor struct {
-	adapter RequestMappingHandlerAdapter
-}
-
-func NewRequestMappingHandlerAdapterProcessor(adapter RequestMappingHandlerAdapter) RequestMappingHandlerAdapterProcessor {
-	return RequestMappingHandlerAdapterProcessor{
-		adapter,
-	}
-}
-
-func (processor RequestMappingHandlerAdapterProcessor) BeforePeaInitialization(peaName string, pea interface{}) (interface{}, error) {
-	return pea, nil
-}
-
-func (processor RequestMappingHandlerAdapterProcessor) AfterPeaInitialization(peaName string, pea interface{}) (interface{}, error) {
-	return pea, nil
 }

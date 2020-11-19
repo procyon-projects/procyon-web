@@ -1,396 +1,163 @@
 package web
 
-import (
-	"regexp"
-	"strings"
+type RouterNodeType byte
+
+const (
+	PathSegmentNode  RouterNodeType = 0
+	PathVariableNode RouterNodeType = 1
+	PathWildcardNode RouterNodeType = 2
 )
 
-type RouterNodeType uint8
-
-const PathSegmentNode RouterNodeType = 0
-const PathVariableNode RouterNodeType = 1
-
 type RouterPathNode struct {
-	variableNode      bool
-	nodeType          RouterNodeType
-	path              string
-	fullPath          string
-	handler           *HandlerMethod
-	childNodes        []*RouterPathNode
-	indices           string
-	pathVariableNames []string
-	pathVariableRegex []*regexp.Regexp
-	parentNode        *RouterPathNode
-	wildCardNode      *RouterPathNode
-	hasWildcard       bool
-	hasChildNode      bool
+	path                []byte
+	length              uint
+	nodeType            RouterNodeType
+	handlerChain        *HandlerChain
+	childNodes          []*RouterPathNode
+	indices             []byte
+	pathVariableNames   []string
+	wildCardNode        *RouterPathNode
+	pathVariableNode    *RouterPathNode
+	childNode           *RouterPathNode
+	hasWildcard         bool
+	hasPathVariableNode bool
+	childIndex          byte
+	childStartIndex     byte
+	childEndIndex       byte
 }
 
-func (node *RouterPathNode) AddChildNode(path string, fullPath string, handler *HandlerMethod) {
+func (node *RouterPathNode) addChildNode(child *RouterPathNode) {
+	character := child.path[0]
 
-	fullPathIndex := 0
-	startIndex := 0
-	endIndex := len(path) - 1
-	var pathVariableNames []string
-	var pathVariableRegex []*regexp.Regexp
+	if len(node.childNodes) == 0 {
+		node.childNodes = append(node.childNodes, nil)
+		node.childStartIndex = character
+		node.indices = []byte{0}
+	} else {
+		var difference byte
+		if character < node.childStartIndex {
+			difference = node.childStartIndex - character
+		} else if character >= node.childEndIndex {
+			difference = character - node.childEndIndex + 1
+		}
 
-visit:
+		newIndices := make([]byte, difference+byte(len(node.indices)))
+		if character < node.childStartIndex {
+			copy(newIndices[difference:], node.indices)
+			node.childStartIndex = character
+		} else if character >= node.childEndIndex {
+			copy(newIndices, node.indices)
+		}
+
+		node.indices = newIndices
+	}
+
+	node.childEndIndex = node.childStartIndex + byte(len(node.indices))
+	index := node.indices[character-node.childStartIndex]
+
+	if index == 0 {
+		node.indices[character-node.childStartIndex] = byte(len(node.childNodes))
+		node.childNodes = append(node.childNodes, child)
+	} else {
+		node.childNodes[index] = child
+	}
+
+	tempIndex := 47 - int(node.childStartIndex)
+	if tempIndex >= 0 {
+		node.childIndex = node.indices[tempIndex]
+		node.childNode = node.childNodes[node.childIndex]
+	}
+}
+
+func (node *RouterPathNode) handlePathSegment(path []byte, chain *HandlerChain) {
+
+search:
 	for {
 
-		if startIndex >= endIndex {
+		if len(path) == 0 {
+			node.handlerChain = chain
 			break
 		}
 
-		matchIndex := 0
-		for matchIndex < len(node.path) && matchIndex < len(path) && path[matchIndex] == node.path[matchIndex] {
-			matchIndex++
-		}
-
-		if node.nodeType == PathVariableNode {
-			character := path[0]
-			if character != '{' {
-				if len(node.childNodes) == 0 {
-					tempEndIndex := 0
-					for ; tempEndIndex < len(path) && path[tempEndIndex] != '{'; tempEndIndex++ {
-					}
-					pathNode := &RouterPathNode{
-						nodeType: PathSegmentNode,
-						path:     path[matchIndex:tempEndIndex],
-						fullPath: sanitizePath(fullPath[:fullPathIndex+matchIndex+tempEndIndex]),
-					}
-					node.childNodes = append(node.childNodes, pathNode)
-					node = pathNode
-					startIndex += len(path[:tempEndIndex])
-					path = path[tempEndIndex:]
-					continue
-
-				} else {
-					node = node.childNodes[0]
-					continue
+		if path[0] == ':' || path[0] == '*' {
+			tempIndex := 1
+			for tempIndex < len(path) {
+				if path[tempIndex] == '/' {
+					break
 				}
-			} else {
-				processed, variableName, regex := node.handlePathVariable(0, len(path), path, fullPath)
-				pathVariableNames = append(pathVariableNames, variableName)
-				pathVariableRegex = append(pathVariableRegex, regex)
-				startIndex += processed
-				path = path[processed:]
-				fullPathIndex += processed
-				node = node.childNodes[0]
-				continue
-			}
-		} else if node.nodeType == PathSegmentNode {
-			if matchIndex < len(node.path) {
-
-				character := path[0]
-				if character != '{' {
-					newNode := &RouterPathNode{
-						nodeType:          PathSegmentNode,
-						path:              node.path[matchIndex:],
-						childNodes:        node.childNodes,
-						indices:           node.indices,
-						handler:           node.handler,
-						fullPath:          node.fullPath,
-						pathVariableNames: node.pathVariableNames,
-						pathVariableRegex: node.pathVariableRegex,
-						wildCardNode:      node.wildCardNode,
-						hasWildcard:       node.hasWildcard,
-						hasChildNode:      node.hasChildNode,
-						parentNode:        node.parentNode,
-					}
-					node.childNodes = []*RouterPathNode{newNode}
-					node.indices = string([]byte{node.path[matchIndex]})
-					node.path = sanitizePath(path[:matchIndex])
-					node.handler = nil
-					node.pathVariableNames = nil
-					node.pathVariableRegex = nil
-					node.wildCardNode = nil
-					node.hasWildcard = false
-					node.hasChildNode = false
-					node.parentNode = nil
-					node.fullPath = sanitizePath(fullPath[:fullPathIndex+matchIndex])
-					startIndex += matchIndex
-					fullPathIndex += len(node.path)
-				}
+				tempIndex++
 			}
 
-			if matchIndex < len(path) {
-				path = path[matchIndex:]
-
-				character := path[0]
-
-				searchCharacter := character
-				if character == '{' {
-					searchCharacter = '*'
-				}
-
-				for i := 0; i < len(node.indices); i++ {
-					if searchCharacter == node.indices[i] {
-						if searchCharacter == '*' {
-							fullPathIndex += len(node.path)
-							startIndex += len(node.path)
-							processed, variableName, regex := node.handlePathVariable(0, len(path), path, fullPath)
-							pathVariableNames = append(pathVariableNames, variableName)
-							pathVariableRegex = append(pathVariableRegex, regex)
-							fullPathIndex += processed
-							startIndex += processed
-							path = path[processed:]
-						} else {
-							fullPathIndex += len(node.path)
-							startIndex += len(node.path)
-						}
-						node = node.childNodes[i]
-						continue visit
-					}
-				}
-
-				if character != '{' {
-					tempEndIndex := 0
-					for ; tempEndIndex < len(path) && path[tempEndIndex] != '{'; tempEndIndex++ {
-					}
-					pathSegmentNode := &RouterPathNode{
-						nodeType: PathSegmentNode,
-						path:     sanitizePath(path[:tempEndIndex]),
-						fullPath: fullPath,
-					}
-					startIndex += len(path[:tempEndIndex])
-					startIndex += matchIndex
-					path = path[tempEndIndex:]
-
-					node.indices += string([]byte{character})
-					node.indices = updateIndices(node.indices)
-					node.childNodes = append(node.childNodes, pathSegmentNode)
-					pathSegmentNode.parentNode = node
-					node.hasChildNode = true
-					node = pathSegmentNode
-					continue
-				} else {
-					processed, variableName, regex := node.handlePathVariable(0, len(path), path, fullPath)
-					pathVariableNames = append(pathVariableNames, variableName)
-					pathVariableRegex = append(pathVariableRegex, regex)
-
-					variableNode := &RouterPathNode{
-						variableNode: true,
-						nodeType:     PathVariableNode,
-						path:         sanitizePath(path[:processed]),
-						fullPath:     sanitizePath(fullPath[:fullPathIndex+processed]),
-					}
-					startIndex += processed
-					path = path[processed:]
-					fullPathIndex += processed
-
-					node.indices += string([]byte{'*'})
-					node.wildCardNode = variableNode
-					node.hasWildcard = true
-					node.childNodes = append(node.childNodes, variableNode)
-					variableNode.parentNode = node
-					node.hasChildNode = true
-					node = variableNode
-					continue
-				}
+			pathVariableName := path[1:tempIndex]
+			child := &RouterPathNode{
+				path:   []byte("*"),
+				length: uint(len(pathVariableName)),
 			}
-		}
-	}
-	node.handler = handler
-	node.fullPath = sanitizePathSegment(fullPath, false)
-	node.pathVariableNames = pathVariableNames
-	node.pathVariableRegex = pathVariableRegex
-}
 
-func (node *RouterPathNode) handlePathVariable(startIndex int, endIndex int, path string, fullPath string) (int, string, *regexp.Regexp) {
-	// path variables
-
-	offset := 0
-	variableName := ""
-	variableEndIndex := -1
-	colonIndex := -1
-	var regex *regexp.Regexp
-
-	tempEndIndex := startIndex + 1
-	if startIndex != -1 {
-		for tempEndIndex < endIndex && path[tempEndIndex] != '/' {
-			if path[tempEndIndex] == '}' {
-				variableEndIndex = tempEndIndex
+			if path[0] == ':' {
+				child.nodeType = PathVariableNode
+				chain.pathVariables = append(chain.pathVariables, string(pathVariableName))
+				node.pathVariableNode = child
+				node.hasPathVariableNode = true
+				node = child
+				path = path[tempIndex:]
+				continue search
 			}
-			tempEndIndex++
-		}
-		if variableEndIndex == -1 && path[tempEndIndex] == '}' && tempEndIndex == endIndex {
-			variableEndIndex = tempEndIndex
-		}
-	}
 
-	if startIndex != -1 && variableEndIndex == -1 {
-		panic("Close the bracket : " + path[startIndex:] + " in path " + fullPath)
-	} else if startIndex != -1 && variableEndIndex != -1 {
-		if variableEndIndex-startIndex < 2 {
-			panic("Give a name your path variable" + path[startIndex:endIndex] + " in path " + fullPath)
+			child.nodeType = PathWildcardNode
+			child.handlerChain = chain
+			node.wildCardNode = child
+			node.hasWildcard = true
+			break
 		}
 
-		pathVariable := path[startIndex : variableEndIndex+1]
-		offset = variableEndIndex - startIndex + 1
-		colonIndex = strings.Index(pathVariable, ":")
-
-		if colonIndex == -1 {
-
-			variableName = pathVariable[1 : len(pathVariable)-1]
-		} else {
-			variablePattern := pathVariable[colonIndex+1 : len(pathVariable)-1]
-			variableName = pathVariable[1:colonIndex]
-			result, err := regexp.Compile("^" + variablePattern + "$")
-
-			if err != nil {
-				panic("Invalid regex " + path[startIndex:endIndex] + " in path " + fullPath)
+		pathVariableIndex := -1
+		tempIndex := 0
+		for tempIndex < len(path) {
+			if path[tempIndex] == ':' || path[tempIndex] == '*' {
+				pathVariableIndex = tempIndex
+				break
 			}
-			regex = result
+			tempIndex++
 		}
 
-		if len(variableName) == 0 {
-			panic("Give a name your path variable" + path[startIndex:endIndex] + " in path " + fullPath)
-		}
-
-		return offset, variableName, regex
-	}
-	return offset, "", regex
-}
-
-type RouterMethodNode struct {
-	method           RequestMethod
-	root             *RouterPathNode
-	registeredRoutes []string
-}
-
-func (methodNode *RouterMethodNode) AddRoute(path string, handler *HandlerMethod) {
-	if methodNode.root == nil {
-		rootNode := &RouterPathNode{
-			path:     "/",
-			fullPath: "/",
-		}
-		rootNode.AddChildNode(path, path, handler)
-		methodNode.root = rootNode
-	} else {
-		conflictCheck(methodNode.registeredRoutes, path)
-		methodNode.root.AddChildNode(path, path, handler)
-	}
-	methodNode.registeredRoutes = append(methodNode.registeredRoutes, path)
-}
-
-func updateIndices(indices string) string {
-	if indices == "" {
-		return ""
-	}
-	result := ""
-	hasWildcard := false
-	for index := 0; index < len(indices); index++ {
-		if indices[index] == '*' {
-			hasWildcard = true
-		} else {
-			result = result + string(indices[index])
-		}
-	}
-	if hasWildcard {
-		result = result + "*"
-	}
-	return result
-}
-
-func splitRoute(c rune) bool {
-	return c == '/'
-}
-
-func conflictCheck(routes []string, route string) {
-	for _, registeredRoute := range routes {
-		conflictCheckRoute(registeredRoute, route)
-	}
-}
-
-func conflictCheckRoute(registeredRoute string, route string) {
-	splitRegisteredRoutes := strings.FieldsFunc(registeredRoute, splitRoute)
-	splitRoutes := strings.FieldsFunc(route, splitRoute)
-
-	fullRegisteredRoute := ""
-	fullRoute := ""
-	if len(splitRegisteredRoutes) == len(splitRoutes) {
-		index := 0
-		for ; index < len(splitRegisteredRoutes); index++ {
-			routeToken := splitRoutes[index]
-			if routeToken == "" {
-				panic("Path segment cannot be null")
+		if pathVariableIndex == -1 {
+			if len(node.path) == 0 {
+				node.path = path
+				node.length = uint(len(path))
+				node.handlerChain = chain
+				break
 			}
-			registeredRouteToken := splitRegisteredRoutes[index]
 
-			if isPathVariable(registeredRouteToken) && isPathVariable(routeToken) {
-				fullRegisteredRoute += "/*"
-				fullRoute += "/*"
-			} else if isPathVariable(registeredRouteToken) && !isPathVariable(routeToken) {
-				fullRegisteredRoute += "/" + routeToken
-				fullRoute += "/" + routeToken
-			} else if !isPathVariable(registeredRouteToken) && isPathVariable(routeToken) {
-				fullRegisteredRoute += "/" + registeredRouteToken
-				fullRoute += "/" + registeredRouteToken
-			} else {
-				fullRegisteredRoute += "/" + registeredRouteToken
-				fullRoute += "/" + routeToken
+			child := &RouterPathNode{
+				path:         path,
+				length:       uint(len(path)),
+				handlerChain: chain,
 			}
-		}
-		if fullRoute == fullRegisteredRoute {
-			panic("Conflict between " + route + " and " + registeredRoute)
-		}
-	}
-}
 
-func isPathVariable(str string) bool {
-	if str[0] == '{' {
-		return true
-	}
-	return false
-}
-
-func sanitizePath(path string) string {
-	return sanitizePathSegment(path, true)
-}
-
-func sanitizePathSegment(path string, wildcard bool) string {
-	offset := 0
-	result := ""
-	colon := false
-	for index := 0; index < len(path); index++ {
-		if colon && path[index] != '/' {
-			offset++
-			continue
-		} else {
-			colon = false
+			node.addChildNode(child)
+			break
 		}
-		if path[index] != ':' {
-			continue
-		}
-		result = result + path[offset:index]
-		offset = index
-		colon = true
-	}
-	result = result + path[offset:]
-	if !wildcard {
-		return result
-	}
-	return sanitizePathVariable(result)
-}
 
-func sanitizePathVariable(path string) string {
-	if path == "/" || path == "" {
-		return path
-	}
-	result := ""
-	tokens := strings.FieldsFunc(path, splitRoute)
-	for _, token := range tokens {
-		if token[0] == '{' {
-			result += "/*"
-		} else {
-			result += "/" + token
+		if len(node.path) == 0 {
+			node.path = path[:pathVariableIndex]
+			node.length = uint(len(path[:pathVariableIndex]))
+			path = path[pathVariableIndex:]
+			continue search
 		}
+
+		child := &RouterPathNode{
+			path:   path[:pathVariableIndex],
+			length: uint(len(path[:pathVariableIndex])),
+		}
+
+		if child.path[0] == '/' {
+			child.handlerChain = node.handlerChain
+		}
+
+		node.addChildNode(child)
+		node = child
+		path = path[pathVariableIndex:]
 	}
-	if path[len(path)-1] == '/' && result[len(result)-1] != '/' {
-		result += "/"
-	}
-	if path[0] != '/' && result[0] == '/' {
-		result = result[1:]
-	}
-	return result
+
 }

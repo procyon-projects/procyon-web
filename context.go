@@ -2,11 +2,10 @@ package web
 
 import (
 	"github.com/codnect/goo"
-	"github.com/google/uuid"
 	"github.com/procyon-projects/procyon-configure"
 	"github.com/procyon-projects/procyon-context"
-	"net/http"
-	"net/url"
+	core "github.com/procyon-projects/procyon-core"
+	"github.com/valyala/fasthttp"
 	"strconv"
 )
 
@@ -15,75 +14,97 @@ type PathVariable struct {
 	Value string
 }
 
-type RequestContext interface {
-	context.Context
-	GetHeaderValue(key string) string
-	GetPathVariables() []PathVariable
-	GetPathVariable(name string) (string, bool)
-	GetRequestParameter(name string) string
-	GetRequestData() interface{}
-}
-
 type WebRequestContext struct {
-	hasContextId      bool
-	contextId         uuid.UUID
-	request           *http.Request
-	header            http.Header
-	requestParamCache url.Values
-	pathVariables     []PathVariable
-	formCache         url.Values
-	requestData       interface{}
+	contextIdBuffer        [36]byte
+	contextStr             string
+	handlerChain           *HandlerChain
+	fastHttpRequestContext *fasthttp.RequestCtx
+	pathVariables          [20]string
+	paramCount             int
+	responseEntity         *ResponseEntity
+	handlerIndex           int
+	inMainHandler          bool
+	completedFlow          bool
+	err                    error
+	needReset              bool
 }
 
 func newWebRequestContext() interface{} {
-	return &WebRequestContext{}
-}
-
-func (context *WebRequestContext) reset() {
-	if !context.hasContextId {
-		context.contextId, _ = uuid.NewUUID()
+	return &WebRequestContext{
+		handlerIndex: -1,
 	}
-	context.request = nil
-	context.header = nil
-	context.pathVariables = context.pathVariables[0:0]
-	context.requestParamCache = nil
-	context.formCache = nil
-	context.requestData = nil
 }
 
-func (context *WebRequestContext) GetContextId() uuid.UUID {
-	return context.contextId
+func (ctx *WebRequestContext) GetContextId() context.ContextId {
+	return "ctx.contextStr"
 }
 
-func (context *WebRequestContext) GetHeaderValue(key string) string {
-	if context.header == nil {
-		context.header = context.request.Header
+func (ctx *WebRequestContext) reset() {
+	ctx.handlerChain = nil
+	ctx.handlerIndex = -1
+	ctx.inMainHandler = true
+	ctx.paramCount = 0
+}
+
+func (ctx *WebRequestContext) prepare() {
+	core.GenerateUUID(ctx.contextIdBuffer[:])
+	ctx.contextStr = bytesToStr(ctx.contextIdBuffer[:])
+}
+
+func (ctx *WebRequestContext) Next() {
+	if ctx.inMainHandler {
+		return
 	}
-	return context.header.Get(key)
+	if ctx.handlerIndex >= ctx.handlerChain.handlerEndIndex {
+		return
+	}
+	ctx.handlerIndex++
+	if ctx.handlerIndex < ctx.handlerChain.handlerIndex {
+		ctx.handlerChain.allHandlers[ctx.handlerIndex](ctx)
+		return
+	} else if ctx.handlerIndex == ctx.handlerChain.handlerIndex {
+		ctx.inMainHandler = true
+		ctx.handlerChain.allHandlers[ctx.handlerIndex](ctx)
+		ctx.handlerIndex++
+		ctx.inMainHandler = false
+	}
+	if ctx.handlerIndex < ctx.handlerChain.afterStartIndex {
+		ctx.handlerChain.allHandlers[ctx.handlerIndex](ctx)
+		return
+	} else if ctx.handlerIndex < ctx.handlerChain.afterCompletionStartIndex {
+		ctx.completedFlow = true
+		ctx.handlerChain.allHandlers[ctx.handlerIndex](ctx)
+	}
 }
 
-func (context *WebRequestContext) GetPathVariables() []PathVariable {
-	return context.pathVariables
+func (ctx *WebRequestContext) addPathVariableValue(pathVariableName string) {
+	ctx.pathVariables[ctx.paramCount] = pathVariableName
+	ctx.paramCount++
 }
 
-func (context *WebRequestContext) GetPathVariable(name string) (string, bool) {
-	for _, variable := range context.pathVariables {
+func (ctx *WebRequestContext) GetHeaderValue(key string) string {
+	return ""
+}
+
+func (ctx *WebRequestContext) GetPathVariables() []PathVariable {
+	return nil
+}
+
+func (ctx *WebRequestContext) GetPathVariable(name string) (string, bool) {
+	/*	for _, variable := range context.pathVariables {
 		if variable.Key == name {
 			return variable.Value, true
 		}
-	}
+	}*/
 	return "", false
 }
 
-func (context *WebRequestContext) GetRequestParameter(name string) string {
-	if context.requestParamCache == nil {
-		context.requestParamCache = context.request.URL.Query()
-	}
-	return context.requestParamCache.Get(name)
+func (ctx *WebRequestContext) GetRequestParameter(name string) string {
+	return ""
 }
 
-func (context *WebRequestContext) GetRequestData() interface{} {
-	return context.requestData
+func (ctx *WebRequestContext) GetRequestData() interface{} {
+	return nil
 }
 
 type WebApplicationContext interface {
@@ -99,7 +120,7 @@ type BaseWebApplicationContext struct {
 	*context.BaseApplicationContext
 }
 
-func NewBaseWebApplicationContext(appId uuid.UUID, contextId uuid.UUID, configurableContextAdapter context.ConfigurableContextAdapter) *BaseWebApplicationContext {
+func NewBaseWebApplicationContext(appId context.ApplicationId, contextId context.ContextId, configurableContextAdapter context.ConfigurableContextAdapter) *BaseWebApplicationContext {
 	return &BaseWebApplicationContext{
 		context.NewBaseApplicationContext(appId, contextId, configurableContextAdapter),
 	}
@@ -120,7 +141,7 @@ type ProcyonServerApplicationContext struct {
 	server Server
 }
 
-func NewProcyonServerApplicationContext(appId uuid.UUID, contextId uuid.UUID) *ProcyonServerApplicationContext {
+func NewProcyonServerApplicationContext(appId context.ApplicationId, contextId context.ContextId) *ProcyonServerApplicationContext {
 	ctx := &ProcyonServerApplicationContext{}
 	genericCtx := NewBaseWebApplicationContext(appId, contextId, ctx)
 	ctx.BaseWebApplicationContext = genericCtx

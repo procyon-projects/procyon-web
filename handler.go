@@ -1,24 +1,45 @@
 package web
 
-import (
-	"github.com/codnect/goo"
-)
+type HandlerFunction func(requestContext *WebRequestContext)
 
-type HandlerMethod struct {
-	method RequestHandlerFunc
+type HandlerChain struct {
+	handler                   RequestHandlerFunction
+	interceptors              []HandlerInterceptor
+	allHandlers               []HandlerFunction
+	handlerIndex              int
+	afterStartIndex           int
+	afterCompletionStartIndex int
+	handlerEndIndex           int
+	pathVariables             []string
 }
 
-func NewSimpleHandlerMethod(method RequestHandlerFunc) *HandlerMethod {
-	typ := goo.GetType(method)
-	if !typ.IsFunction() {
-		panic("Handler method is not function")
+func NewHandlerChain(fun RequestHandlerFunction, interceptors []HandlerInterceptor) *HandlerChain {
+	chain := &HandlerChain{
+		fun,
+		interceptors,
+		make([]HandlerFunction, 0),
+		0,
+		0,
+		0,
+		0,
+		nil,
 	}
-	handlerMethod := &HandlerMethod{
-		method,
+	if len(chain.interceptors) == 0 {
+		chain.interceptors = make([]HandlerInterceptor, 0)
 	}
-	return handlerMethod
-}
-
-func (handlerMethod HandlerMethod) InvokeHandler(args ...interface{}) []interface{} {
-	return nil
+	for _, interceptor := range chain.interceptors {
+		chain.allHandlers = append(chain.allHandlers, interceptor.HandleBefore)
+	}
+	chain.handlerIndex = len(chain.allHandlers)
+	chain.allHandlers = append(chain.allHandlers, chain.handler)
+	chain.afterStartIndex = len(chain.allHandlers)
+	for index := len(interceptors) - 1; index >= 0; index-- {
+		chain.allHandlers = append(chain.allHandlers, interceptors[index].HandleAfter)
+	}
+	chain.afterCompletionStartIndex = len(chain.allHandlers)
+	for index := len(interceptors) - 1; index >= 0; index-- {
+		chain.allHandlers = append(chain.allHandlers, interceptors[index].AfterCompletion)
+	}
+	chain.handlerEndIndex = len(chain.allHandlers) - 1
+	return chain
 }
