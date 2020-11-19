@@ -73,6 +73,7 @@ type WebRequestContext struct {
 	completedFlow          bool
 	err                    error
 	needReset              bool
+	valueMap               map[string]interface{}
 }
 
 func newWebRequestContext() interface{} {
@@ -83,6 +84,14 @@ func newWebRequestContext() interface{} {
 
 func (ctx *WebRequestContext) GetContextId() context.ContextId {
 	return context.ContextId(ctx.contextIdStr)
+}
+
+func (ctx *WebRequestContext) Get(key string) interface{} {
+	return ctx.valueMap[key]
+}
+
+func (ctx *WebRequestContext) Put(key string, value interface{}) {
+	ctx.valueMap[key] = value
 }
 
 func (ctx *WebRequestContext) reset() {
