@@ -20,6 +20,9 @@ type ProcyonRouter struct {
 func NewProcyonRouterForBenchmark(context context.ConfigurableApplicationContext, handlerRegistry SimpleHandlerRegistry) *ProcyonRouter {
 	router := &ProcyonRouter{
 		ctx: context,
+		requestContextPool: &sync.Pool{
+			New: newWebRequestContext,
+		},
 	}
 	router.handlerMapping = NewRequestHandlerMapping(NewRequestMappingRegistry())
 	registryMap := handlerRegistry.getRegistryMap()
@@ -28,15 +31,15 @@ func NewProcyonRouterForBenchmark(context context.ConfigurableApplicationContext
 			router.handlerMapping.RegisterHandlerMethod(handler.Path, handler.Methods[0], handler.HandlerFunc)
 		}
 	}
-	router.requestContextPool = &sync.Pool{
-		New: newWebRequestContext,
-	}
 	return router
 }
 
 func NewProcyonRouter(context context.ConfigurableApplicationContext) *ProcyonRouter {
 	router := &ProcyonRouter{
 		ctx: context,
+		requestContextPool: &sync.Pool{
+			New: newWebRequestContext,
+		},
 	}
 	router.registerHandlerAdapter()
 	return router
