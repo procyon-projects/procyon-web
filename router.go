@@ -53,19 +53,13 @@ func (router *ProcyonRouter) Route(requestCtx *fasthttp.RequestCtx) {
 	requestContext := router.requestContextPool.Get().(*WebRequestContext)
 	requestContext.fastHttpRequestContext = requestCtx
 
-	/* if it's needed, reset the values in context */
-	if requestContext.needReset {
-		requestContext.reset()
-	} else {
-		requestContext.needReset = true
-	}
-
 	// prepare the context
 	requestContext.prepare()
 
 	// get handler chain and call all handlers
 	router.handlerMapping.GetHandlerChain(requestContext)
 	requestContext.Next()
+	requestContext.reset()
 
 	// after it's finished, put the request context to pool back
 	router.requestContextPool.Put(requestContext)

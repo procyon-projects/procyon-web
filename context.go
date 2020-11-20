@@ -72,7 +72,6 @@ type WebRequestContext struct {
 	inMainHandler          bool
 	completedFlow          bool
 	err                    error
-	needReset              bool
 	valueMap               map[string]interface{}
 }
 
