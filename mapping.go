@@ -6,14 +6,12 @@ type MappingRegistry interface {
 }
 
 type RequestMappingRegistry struct {
-	routerTree       *RouterTree
-	mappingUrlLookup map[string][]interface{}
+	routerTree *RouterTree
 }
 
 func NewRequestMappingRegistry() RequestMappingRegistry {
 	return RequestMappingRegistry{
-		routerTree:       newRouterTree(),
-		mappingUrlLookup: make(map[string][]interface{}),
+		routerTree: newRouterTree(),
 	}
 }
 

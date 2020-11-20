@@ -2,7 +2,7 @@ package web
 
 import (
 	"bytes"
-	"unsafe"
+	core "github.com/procyon-projects/procyon-core"
 )
 
 type RouterTree struct {
@@ -271,13 +271,13 @@ search:
 
 				for {
 					if index == pathLength {
-						ctx.addPathVariableValue(bytesToStr(path[processed:index]))
+						ctx.addPathVariableValue(core.BytesToStr(path[processed:index]))
 						ctx.handlerChain = node.handlerChain
 						return
 					}
 
 					if path[index] == 47 {
-						ctx.addPathVariableValue(bytesToStr(path[processed:index]))
+						ctx.addPathVariableValue(core.BytesToStr(path[processed:index]))
 						node = node.childNode
 						processed = index
 						index++
@@ -289,7 +289,7 @@ search:
 			}
 
 			if node.hasWildcard {
-				ctx.addPathVariableValue(bytesToStr(path[index:]))
+				ctx.addPathVariableValue(core.BytesToStr(path[index:]))
 				ctx.handlerChain = node.wildCardNode.handlerChain
 			}
 			break
@@ -297,7 +297,7 @@ search:
 
 		if path[index] != node.path[index-processed] {
 			if existLastWildcard {
-				ctx.addPathVariableValue(bytesToStr(path[lastWildcard:]))
+				ctx.addPathVariableValue(core.BytesToStr(path[lastWildcard:]))
 				ctx.handlerChain = lastWildcardNode.handlerChain
 			}
 			break
@@ -305,8 +305,4 @@ search:
 
 		index++
 	}
-}
-
-func bytesToStr(bytes []byte) string {
-	return *(*string)(unsafe.Pointer(&bytes))
 }

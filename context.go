@@ -99,6 +99,7 @@ func (ctx *WebRequestContext) reset() {
 	ctx.handlerIndex = -1
 	ctx.inMainHandler = true
 	ctx.paramCount = 0
+	ctx.valueMap = nil
 }
 
 func (ctx *WebRequestContext) prepare() {
