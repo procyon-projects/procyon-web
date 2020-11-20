@@ -104,7 +104,7 @@ func (ctx *WebRequestContext) reset() {
 
 func (ctx *WebRequestContext) prepare() {
 	core.GenerateUUID(ctx.contextIdBuffer[:])
-	ctx.contextIdStr = bytesToStr(ctx.contextIdBuffer[:])
+	ctx.contextIdStr = core.BytesToStr(ctx.contextIdBuffer[:])
 }
 
 func (ctx *WebRequestContext) Next() {
