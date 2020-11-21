@@ -1,45 +1,32 @@
 package web
 
-import "net/http"
+type MediaType string
+
+const (
+	DefaultMediaType                   = MediaTypeApplicationJson
+	MediaTypeApplicationXml  MediaType = "application/xml"
+	MediaTypeApplicationJson MediaType = "application/json"
+)
+
+type ResponseHeaderBuilder interface {
+	AddHeader(key string, value string) ResponseHeaderBuilder
+}
+
+type ResponseBodyBuilder interface {
+	ResponseHeaderBuilder
+	SetStatus(status int) ResponseBodyBuilder
+	SetBody(body interface{}) ResponseBodyBuilder
+	SetContentType(mediaType MediaType) ResponseBodyBuilder
+}
 
 type Response interface {
 	GetStatus() int
 	GetBody() interface{}
+	GetContentType() MediaType
 }
 
 type ResponseEntity struct {
-	status int
-	body   interface{}
-}
-
-type ResponseEntityOption func(body *ResponseEntity)
-
-func NewResponseEntity(options ...ResponseEntityOption) *ResponseEntity {
-	body := &ResponseEntity{
-		status: http.StatusOK,
-	}
-	for _, option := range options {
-		option(body)
-	}
-	return body
-}
-
-func WithStatus(status int) ResponseEntityOption {
-	return func(body *ResponseEntity) {
-		body.status = status
-	}
-}
-
-func WithBody(body interface{}) ResponseEntityOption {
-	return func(body *ResponseEntity) {
-		body.body = body
-	}
-}
-
-func (body *ResponseEntity) GetStatus() int {
-	return body.status
-}
-
-func (body *ResponseEntity) GetBody() interface{} {
-	return body.body
+	body        interface{}
+	status      int
+	contentType MediaType
 }
