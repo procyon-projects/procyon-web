@@ -228,9 +228,13 @@ func (ctx *WebRequestContext) Created(location string) ResponseBodyBuilder {
 }
 
 func (ctx *WebRequestContext) GetError() error {
-	return nil
+	return ctx.err
 }
 
 func (ctx *WebRequestContext) SetError(err error) {
+	ctx.err = err
+}
 
+func (ctx *WebRequestContext) ThrowError(err error) {
+	panic(err)
 }

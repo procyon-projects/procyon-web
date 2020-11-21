@@ -1,6 +1,8 @@
 package web
 
-import "errors"
+import (
+	"errors"
+)
 
 type HandlerInterceptor interface {
 	HandleBefore(requestContext *WebRequestContext)
