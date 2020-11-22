@@ -36,9 +36,9 @@ func (processor RequestHandlerMappingProcessor) processHandler(handlerRegistry H
 	}
 	if simpleRegistry, ok := handlerRegistry.(SimpleHandlerRegistry); ok {
 		registryMap := simpleRegistry.getRegistryMap()
-		for _, handlers := range registryMap {
+		for prefix, handlers := range registryMap {
 			for _, handler := range handlers {
-				processor.requestHandlerMapping.RegisterHandlerMethod("", "", handler.HandlerFunc)
+				processor.requestHandlerMapping.RegisterHandlerMethod(prefix+handler.Path, handler.Methods[0], handler.HandlerFunc)
 			}
 		}
 	}
