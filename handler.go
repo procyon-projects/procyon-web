@@ -13,10 +13,10 @@ type HandlerChain struct {
 	pathVariables             []string
 }
 
-func NewHandlerChain(fun RequestHandlerFunction, interceptors []HandlerInterceptor) *HandlerChain {
+func NewHandlerChain(fun RequestHandlerFunction) *HandlerChain {
 	chain := &HandlerChain{
 		fun,
-		interceptors,
+		make([]HandlerInterceptor, 0),
 		make([]HandlerFunction, 0),
 		0,
 		0,
@@ -24,10 +24,13 @@ func NewHandlerChain(fun RequestHandlerFunction, interceptors []HandlerIntercept
 		0,
 		nil,
 	}
-	if len(chain.interceptors) == 0 {
-		chain.interceptors = make([]HandlerInterceptor, 0)
-	}
-	for _, interceptor := range chain.interceptors {
+	chain.allHandlers = append(chain.allHandlers, NewRecoveryInterceptor().HandleBefore)
+	chain.handlerIndex = len(chain.allHandlers)
+	chain.allHandlers = append(chain.allHandlers, chain.handler)
+	chain.afterStartIndex = len(chain.allHandlers)
+	chain.afterCompletionStartIndex = len(chain.allHandlers)
+	chain.handlerEndIndex = len(chain.allHandlers) - 1
+	/*for _, interceptor := range chain.interceptors {
 		chain.allHandlers = append(chain.allHandlers, interceptor.HandleBefore)
 	}
 	chain.handlerIndex = len(chain.allHandlers)
@@ -40,6 +43,6 @@ func NewHandlerChain(fun RequestHandlerFunction, interceptors []HandlerIntercept
 	for index := len(interceptors) - 1; index >= 0; index-- {
 		chain.allHandlers = append(chain.allHandlers, interceptors[index].AfterCompletion)
 	}
-	chain.handlerEndIndex = len(chain.allHandlers) - 1
+	chain.handlerEndIndex = len(chain.allHandlers) - 1*/
 	return chain
 }

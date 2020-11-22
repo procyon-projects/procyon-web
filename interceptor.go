@@ -4,9 +4,17 @@ import (
 	"errors"
 )
 
-type HandlerInterceptor interface {
+type HandlerInterceptor func(requestContext *WebRequestContext)
+
+type HandlerInterceptorBefore interface {
 	HandleBefore(requestContext *WebRequestContext)
+}
+
+type HandlerInterceptorAfter interface {
 	HandleAfter(requestContext *WebRequestContext)
+}
+
+type HandlerInterceptorAfterCompletion interface {
 	AfterCompletion(requestContext *WebRequestContext)
 }
 
@@ -31,20 +39,12 @@ func recoveryFunction(requestContext *WebRequestContext) {
 			requestContext.completedFlow = false
 			requestContext.inMainHandler = false
 			requestContext.handlerIndex = requestContext.handlerChain.afterCompletionStartIndex - 1
-			requestContext.Next()
+			requestContext.internalNext()
 		}
 	}
 }
 
 func (interceptor RecoveryInterceptor) HandleBefore(requestContext *WebRequestContext) {
 	defer recoveryFunction(requestContext)
-	requestContext.Next()
-}
-
-func (interceptor RecoveryInterceptor) HandleAfter(requestContext *WebRequestContext) {
-	requestContext.Next()
-}
-
-func (interceptor RecoveryInterceptor) AfterCompletion(requestContext *WebRequestContext) {
 	requestContext.Next()
 }

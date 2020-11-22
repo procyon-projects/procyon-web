@@ -92,7 +92,6 @@ func newWebRequestContext() interface{} {
 func (ctx *WebRequestContext) prepare() {
 	core.GenerateUUID(ctx.contextIdBuffer[:])
 	ctx.contextIdStr = core.BytesToStr(ctx.contextIdBuffer[:])
-	ctx.responseEntity.contentType = DefaultMediaType
 }
 
 func (ctx *WebRequestContext) reset() {
@@ -129,37 +128,30 @@ func (ctx *WebRequestContext) writeResponse() {
 }
 
 func (ctx *WebRequestContext) Next() {
-	if ctx.handlerChain == nil {
+	if ctx.handlerIndex >= ctx.handlerChain.handlerIndex {
 		return
 	}
-
-	if ctx.inMainHandler {
-		return
-	}
-
-	if ctx.handlerIndex >= ctx.handlerChain.handlerEndIndex {
-		return
-	}
-
 	ctx.handlerIndex++
-	if ctx.handlerIndex < ctx.handlerChain.handlerIndex {
-		ctx.handlerChain.allHandlers[ctx.handlerIndex](ctx)
-		return
-	} else if ctx.handlerIndex == ctx.handlerChain.handlerIndex {
-		ctx.inMainHandler = true
-		ctx.handlerChain.allHandlers[ctx.handlerIndex](ctx)
-		ctx.handlerIndex++
-		ctx.inMainHandler = false
+	ctx.handlerChain.allHandlers[ctx.handlerIndex](ctx)
+	if ctx.handlerIndex == ctx.handlerChain.handlerIndex {
+		ctx.internalNext()
 	}
+}
 
-	if ctx.handlerIndex <= ctx.handlerChain.afterStartIndex {
-		ctx.handlerChain.allHandlers[ctx.handlerIndex](ctx)
-		return
-	} else if ctx.handlerIndex <= ctx.handlerChain.afterCompletionStartIndex {
+func (ctx *WebRequestContext) internalNext() {
+next:
+	ctx.handlerIndex++
+	if ctx.handlerIndex == ctx.handlerChain.afterCompletionStartIndex {
 		ctx.writeResponse()
 		ctx.completedFlow = true
-		ctx.handlerChain.allHandlers[ctx.handlerIndex](ctx)
 	}
+
+	if ctx.handlerIndex > ctx.handlerChain.handlerEndIndex {
+		return
+	}
+
+	ctx.handlerChain.allHandlers[ctx.handlerIndex](ctx)
+	goto next
 }
 
 func (ctx *WebRequestContext) GetContextId() context.ContextId {

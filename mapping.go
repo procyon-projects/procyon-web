@@ -39,7 +39,7 @@ func NewRequestHandlerMapping(mappingRegistry MappingRegistry) RequestHandlerMap
 }
 
 func (requestMapping RequestHandlerMapping) RegisterHandlerMethod(path string, method RequestMethod, handlerFunc RequestHandlerFunction) {
-	requestMapping.mappingRegistry.Register(path, method, NewHandlerChain(handlerFunc, []HandlerInterceptor{NewRecoveryInterceptor()}))
+	requestMapping.mappingRegistry.Register(path, method, NewHandlerChain(handlerFunc))
 }
 
 func (requestMapping RequestHandlerMapping) GetHandlerChain(ctx *WebRequestContext) {
