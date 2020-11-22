@@ -129,6 +129,9 @@ func (ctx *WebRequestContext) writeResponse() {
 }
 
 func (ctx *WebRequestContext) Next() {
+	if ctx.handlerChain == nil {
+		return
+	}
 	if ctx.handlerIndex >= ctx.handlerChain.handlerIndex {
 		return
 	}
