@@ -1,6 +1,8 @@
 package web
 
 import (
+	"encoding/json"
+	"encoding/xml"
 	"github.com/codnect/goo"
 	configure "github.com/procyon-projects/procyon-configure"
 	"github.com/procyon-projects/procyon-context"
@@ -104,6 +106,27 @@ func (ctx *WebRequestContext) reset() {
 	ctx.responseEntity.contentType = DefaultMediaType
 }
 
+func (ctx *WebRequestContext) writeResponse() {
+	ctx.fastHttpRequestContext.SetStatusCode(ctx.responseEntity.status)
+	ctx.fastHttpRequestContext.SetContentType(string(ctx.responseEntity.contentType))
+	if ctx.responseEntity.body == nil {
+		return
+	}
+	if ctx.responseEntity.contentType == MediaTypeApplicationJson {
+		result, err := json.Marshal(ctx.responseEntity.body)
+		if err != nil {
+			ctx.ThrowError(err)
+		}
+		ctx.fastHttpRequestContext.SetBody(result)
+	} else {
+		result, err := xml.Marshal(ctx.responseEntity.body)
+		if err != nil {
+			ctx.ThrowError(err)
+		}
+		ctx.fastHttpRequestContext.SetBody(result)
+	}
+}
+
 func (ctx *WebRequestContext) Next() {
 	if ctx.inMainHandler {
 		return
@@ -128,6 +151,7 @@ func (ctx *WebRequestContext) Next() {
 		ctx.handlerChain.allHandlers[ctx.handlerIndex](ctx)
 		return
 	} else if ctx.handlerIndex < ctx.handlerChain.afterCompletionStartIndex {
+		ctx.writeResponse()
 		ctx.completedFlow = true
 		ctx.handlerChain.allHandlers[ctx.handlerIndex](ctx)
 	}
