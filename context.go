@@ -96,9 +96,10 @@ func (ctx *WebRequestContext) prepare() {
 }
 
 func (ctx *WebRequestContext) reset() {
+	ctx.fastHttpRequestContext = nil
 	ctx.handlerChain = nil
 	ctx.handlerIndex = -1
-	ctx.inMainHandler = true
+	ctx.inMainHandler = false
 	ctx.pathVariableCount = 0
 	ctx.valueMap = nil
 	ctx.responseEntity.status = http.StatusOK
@@ -128,6 +129,10 @@ func (ctx *WebRequestContext) writeResponse() {
 }
 
 func (ctx *WebRequestContext) Next() {
+	if ctx.handlerChain == nil {
+		return
+	}
+
 	if ctx.inMainHandler {
 		return
 	}
@@ -147,10 +152,10 @@ func (ctx *WebRequestContext) Next() {
 		ctx.inMainHandler = false
 	}
 
-	if ctx.handlerIndex < ctx.handlerChain.afterStartIndex {
+	if ctx.handlerIndex <= ctx.handlerChain.afterStartIndex {
 		ctx.handlerChain.allHandlers[ctx.handlerIndex](ctx)
 		return
-	} else if ctx.handlerIndex < ctx.handlerChain.afterCompletionStartIndex {
+	} else if ctx.handlerIndex <= ctx.handlerChain.afterCompletionStartIndex {
 		ctx.writeResponse()
 		ctx.completedFlow = true
 		ctx.handlerChain.allHandlers[ctx.handlerIndex](ctx)
@@ -196,6 +201,9 @@ func (ctx *WebRequestContext) SetStatus(status int) ResponseBodyBuilder {
 }
 
 func (ctx *WebRequestContext) SetBody(body interface{}) ResponseBodyBuilder {
+	if body == nil {
+		return ctx
+	}
 	ctx.responseEntity.body = body
 	return ctx
 }
