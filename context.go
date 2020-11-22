@@ -92,6 +92,7 @@ func newWebRequestContext() interface{} {
 func (ctx *WebRequestContext) prepare() {
 	core.GenerateUUID(ctx.contextIdBuffer[:])
 	ctx.contextIdStr = core.BytesToStr(ctx.contextIdBuffer[:])
+	ctx.responseEntity.contentType = DefaultMediaType
 }
 
 func (ctx *WebRequestContext) reset() {
