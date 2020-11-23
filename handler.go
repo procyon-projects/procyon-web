@@ -24,7 +24,7 @@ func NewHandlerChain(fun RequestHandlerFunction) *HandlerChain {
 		0,
 		nil,
 	}
-	chain.allHandlers = append(chain.allHandlers, NewRecoveryInterceptor().HandleBefore)
+	chain.allHandlers = append(chain.allHandlers)
 	chain.handlerIndex = len(chain.allHandlers)
 	chain.allHandlers = append(chain.allHandlers, chain.handler)
 	chain.afterStartIndex = len(chain.allHandlers)

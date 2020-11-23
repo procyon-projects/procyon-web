@@ -3,8 +3,24 @@ package web
 import (
 	"github.com/codnect/goo"
 	"net/http"
+	"reflect"
+	"strings"
+	"sync"
 )
 
+var cacheRequestObject = make(map[reflect.Type]*RequestObjectCache, 0)
+var cacheRequestObjectMu sync.RWMutex
+
+type RequestObjectCache struct {
+	hasOnlyBody      bool
+	bodyFieldIndex   int
+	paramFieldIndex  int
+	pathFieldIndex   int
+	headerFieldIndex int
+	fields           []goo.Field
+}
+
+type RequestObject interface{}
 type RequestHandlerFunction = func(context *WebRequestContext)
 type RequestHandlerOption func(handler *RequestHandler)
 
@@ -27,24 +43,118 @@ type RequestHandler struct {
 	HandlerFunc RequestHandlerFunction
 }
 
-func NewHandler(handler RequestHandlerFunction, options ...RequestHandlerOption) RequestHandler {
+func NewHandler(handler RequestHandlerFunction, requestObject RequestObject, options ...RequestHandlerOption) RequestHandler {
 	if handler == nil {
 		panic("Handler must not be null")
 	}
-	typ := goo.GetType(handler)
-	if !typ.IsFunction() {
+
+	if requestObject == nil {
+		panic("Request Object must not be null")
+	}
+
+	handlerType := goo.GetType(handler)
+	if !handlerType.IsFunction() {
 		panic("Handler must be function")
 	}
+
+	requestObjType := goo.GetType(requestObject)
+	if !requestObjType.IsStruct() {
+		panic("Request object must be struct")
+	}
+	scanRequestObject(requestObjType)
+
 	handlerMethod := &RequestHandler{
 		HandlerFunc: handler,
 	}
+
 	for _, option := range options {
 		option(handlerMethod)
 	}
+
 	if len(handlerMethod.Methods) == 0 {
 		handlerMethod.Methods = []RequestMethod{RequestMethodGet}
 	}
 	return *handlerMethod
+}
+
+func scanRequestObject(requestObjType goo.Type) {
+	structType := requestObjType.ToStructType()
+	if structType.GetFieldCount() == 0 {
+		return
+	}
+	fields := structType.GetFields()
+
+	requestObjcCache := &RequestObjectCache{
+		hasOnlyBody:      false,
+		bodyFieldIndex:   -1,
+		paramFieldIndex:  -1,
+		pathFieldIndex:   -1,
+		headerFieldIndex: -1,
+		fields:           structType.GetFields(),
+	}
+
+	hasField := false
+	requestStruct := false
+	for index, field := range fields {
+		fieldType := field.GetType()
+
+		if fieldType.IsStruct() && strings.HasPrefix(fieldType.GetName(), "struct") {
+			requestStruct = true
+		} else {
+			hasField = true
+		}
+
+		if requestStruct && hasField {
+			panic("Request Object must only consist of untyped request structs or fields completely")
+		}
+
+		if hasField {
+			continue
+		}
+
+		requestTag, err := field.GetTagByName("request")
+
+		if err != nil {
+			panic("Untyped struct must have request tag in Request Object")
+		}
+
+		switch requestTag.Value {
+		case "param":
+			validateRequestStruct(requestTag.Value, field.GetType().ToStructType())
+			requestObjcCache.paramFieldIndex = index
+		case "body":
+			requestObjcCache.bodyFieldIndex = index
+		case "path":
+			validateRequestStruct(requestTag.Value, field.GetType().ToStructType())
+			requestObjcCache.pathFieldIndex = index
+		case "header":
+			validateRequestStruct(requestTag.Value, field.GetType().ToStructType())
+			requestObjcCache.headerFieldIndex = index
+		default:
+			panic("Invalid request tag value")
+		}
+
+	}
+
+	if hasField {
+		requestObjcCache.hasOnlyBody = true
+	}
+	cacheRequestObject[structType.GetGoType()] = requestObjcCache
+}
+
+func validateRequestStruct(requestStructType string, requestStruct goo.Struct) {
+	if requestStruct == nil {
+		return
+	}
+	if "param" == requestStructType || "path" == requestStructType || "header" == requestStructType {
+		fields := requestStruct.GetFields()
+		for _, field := range fields {
+			fieldType := field.GetType()
+			if !fieldType.IsString() && !fieldType.IsBoolean() && !fieldType.IsNumber() {
+				panic("Fields could be string, boolean and number types")
+			}
+		}
+	}
 }
 
 func WithPath(path string) RequestHandlerOption {

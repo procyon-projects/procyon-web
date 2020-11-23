@@ -1,11 +1,17 @@
 package web
 
-type MediaType string
+type MediaType byte
 
 const (
 	DefaultMediaType                   = MediaTypeApplicationJson
-	MediaTypeApplicationXml  MediaType = "application/xml"
-	MediaTypeApplicationJson MediaType = "application/json"
+	MediaTypeApplicationJson MediaType = 0
+	MediaTypeApplicationXml  MediaType = 1
+)
+
+const (
+	DefaultMediaTypeValue         = MediaTypeApplicationJsonValue
+	MediaTypeApplicationXmlValue  = "application/xml"
+	MediaTypeApplicationJsonValue = "application/json"
 )
 
 type ResponseHeaderBuilder interface {

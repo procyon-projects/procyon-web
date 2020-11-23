@@ -1,14 +1,15 @@
 package web
 
 import (
-	"encoding/json"
 	"encoding/xml"
 	"github.com/codnect/goo"
+	json "github.com/json-iterator/go"
 	configure "github.com/procyon-projects/procyon-configure"
 	"github.com/procyon-projects/procyon-context"
 	core "github.com/procyon-projects/procyon-core"
 	"github.com/valyala/fasthttp"
 	"net/http"
+	"reflect"
 	"strconv"
 )
 
@@ -71,7 +72,6 @@ type WebRequestContext struct {
 	// handler
 	handlerChain  *HandlerChain
 	handlerIndex  int
-	inMainHandler bool
 	completedFlow bool
 	// path variables
 	pathVariables     [20]string
@@ -85,21 +85,17 @@ type WebRequestContext struct {
 
 func newWebRequestContext() interface{} {
 	return &WebRequestContext{
-		handlerIndex: -1,
+		handlerIndex: 0,
 	}
 }
 
 func (ctx *WebRequestContext) prepare() {
 	core.GenerateUUID(ctx.contextIdBuffer[:])
 	ctx.contextIdStr = core.BytesToStr(ctx.contextIdBuffer[:])
-	ctx.responseEntity.contentType = DefaultMediaType
 }
 
 func (ctx *WebRequestContext) reset() {
-	ctx.fastHttpRequestContext = nil
-	ctx.handlerChain = nil
-	ctx.handlerIndex = -1
-	ctx.inMainHandler = false
+	ctx.handlerIndex = 0
 	ctx.pathVariableCount = 0
 	ctx.valueMap = nil
 	ctx.responseEntity.status = http.StatusOK
@@ -109,17 +105,24 @@ func (ctx *WebRequestContext) reset() {
 
 func (ctx *WebRequestContext) writeResponse() {
 	ctx.fastHttpRequestContext.SetStatusCode(ctx.responseEntity.status)
-	ctx.fastHttpRequestContext.SetContentType(string(ctx.responseEntity.contentType))
-	if ctx.responseEntity.body == nil {
-		return
-	}
 	if ctx.responseEntity.contentType == MediaTypeApplicationJson {
+		ctx.fastHttpRequestContext.SetContentType(MediaTypeApplicationJsonValue)
+
+		if ctx.responseEntity.body == nil {
+			return
+		}
 		result, err := json.Marshal(ctx.responseEntity.body)
 		if err != nil {
 			ctx.ThrowError(err)
 		}
 		ctx.fastHttpRequestContext.SetBody(result)
 	} else {
+		ctx.fastHttpRequestContext.SetContentType(MediaTypeApplicationXmlValue)
+
+		if ctx.responseEntity.body == nil {
+			return
+		}
+
 		result, err := xml.Marshal(ctx.responseEntity.body)
 		if err != nil {
 			ctx.ThrowError(err)
@@ -128,33 +131,25 @@ func (ctx *WebRequestContext) writeResponse() {
 	}
 }
 
-func (ctx *WebRequestContext) Next() {
-	if ctx.handlerChain == nil {
-		return
-	}
-	if ctx.handlerIndex >= ctx.handlerChain.handlerIndex {
-		return
-	}
-	ctx.handlerIndex++
-	ctx.handlerChain.allHandlers[ctx.handlerIndex](ctx)
-	if ctx.handlerIndex == ctx.handlerChain.handlerIndex {
-		ctx.internalNext()
-	}
+func (ctx *WebRequestContext) invoke() {
+	defer recoveryFunction(ctx)
+	ctx.Next()
 }
 
-func (ctx *WebRequestContext) internalNext() {
+func (ctx *WebRequestContext) Next() {
+	if ctx.handlerIndex > ctx.handlerChain.handlerIndex {
+		return
+	}
 next:
+	if ctx.handlerIndex > ctx.handlerChain.handlerEndIndex {
+		return
+	}
+	ctx.handlerChain.allHandlers[ctx.handlerIndex](ctx)
 	ctx.handlerIndex++
 	if ctx.handlerIndex == ctx.handlerChain.afterCompletionStartIndex {
 		ctx.writeResponse()
 		ctx.completedFlow = true
 	}
-
-	if ctx.handlerIndex > ctx.handlerChain.handlerEndIndex {
-		return
-	}
-
-	ctx.handlerChain.allHandlers[ctx.handlerIndex](ctx)
 	goto next
 }
 
@@ -187,8 +182,68 @@ func (ctx *WebRequestContext) GetHeaderValue(key string) string {
 	return ""
 }
 
-func (ctx *WebRequestContext) GetRequest() interface{} {
-	return nil
+func (ctx *WebRequestContext) GetRequest(request interface{}) {
+	typ := reflect.TypeOf(request)
+	if typ == nil {
+		panic("Type cannot be determined as the given object is nil")
+	}
+	if typ.Kind() == reflect.Ptr {
+		typ = typ.Elem()
+	}
+
+	var cacheType *RequestObjectCache
+	cacheRequestObjectMu.Lock()
+	if cache, ok := cacheRequestObject[typ]; ok {
+		cacheType = cache
+		cacheRequestObjectMu.Unlock()
+	} else {
+		cacheRequestObjectMu.Unlock()
+		return
+	}
+
+	if cacheType == nil {
+		panic("Request object type must be registered before")
+	}
+
+	body := ctx.fastHttpRequestContext.Request.Body()
+	if cacheType.hasOnlyBody {
+		contentType := core.BytesToStr(ctx.fastHttpRequestContext.Request.Header.Peek("Content-Type"))
+		if contentType == MediaTypeApplicationJsonValue {
+			err := json.Unmarshal(body, request)
+			if err != nil {
+				ctx.ThrowError(err)
+			}
+		} else {
+			err := xml.Unmarshal(body, request)
+			if err != nil {
+				ctx.ThrowError(err)
+			}
+		}
+		return
+	}
+
+	val := reflect.ValueOf(request)
+	if val.Kind() == reflect.Ptr {
+		val = val.Elem()
+	}
+
+	if cacheType.bodyFieldIndex != -1 {
+		bodyValue := val.Field(cacheType.bodyFieldIndex)
+		contentType := core.BytesToStr(ctx.fastHttpRequestContext.Request.Header.Peek("Content-Type"))
+		if contentType == DefaultMediaTypeValue || contentType == MediaTypeApplicationJsonValue {
+			err := json.Unmarshal(body, bodyValue.Addr().Interface())
+			if err != nil {
+				ctx.ThrowError(err)
+			}
+		} else {
+			err := xml.Unmarshal(body, bodyValue.Addr().Interface())
+			if err != nil {
+				ctx.ThrowError(err)
+			}
+		}
+
+	}
+
 }
 
 func (ctx *WebRequestContext) SetStatus(status int) ResponseBodyBuilder {
