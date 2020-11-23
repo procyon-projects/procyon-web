@@ -201,10 +201,6 @@ func (ctx *WebRequestContext) GetRequest(request interface{}) {
 		return
 	}
 
-	if cacheType == nil {
-		panic("Request object type must be registered before")
-	}
-
 	body := ctx.fastHttpRequestContext.Request.Body()
 	if cacheType.hasOnlyBody {
 		contentType := core.BytesToStr(ctx.fastHttpRequestContext.Request.Header.Peek("Content-Type"))

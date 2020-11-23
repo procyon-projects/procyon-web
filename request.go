@@ -38,18 +38,15 @@ const (
 )
 
 type RequestHandler struct {
-	Path        string
-	Methods     []RequestMethod
-	HandlerFunc RequestHandlerFunction
+	Path          string
+	Methods       []RequestMethod
+	HandlerFunc   RequestHandlerFunction
+	RequestObject RequestObject
 }
 
-func NewHandler(handler RequestHandlerFunction, requestObject RequestObject, options ...RequestHandlerOption) RequestHandler {
+func NewHandler(handler RequestHandlerFunction, options ...RequestHandlerOption) RequestHandler {
 	if handler == nil {
 		panic("Handler must not be null")
-	}
-
-	if requestObject == nil {
-		panic("Request Object must not be null")
 	}
 
 	handlerType := goo.GetType(handler)
@@ -57,18 +54,20 @@ func NewHandler(handler RequestHandlerFunction, requestObject RequestObject, opt
 		panic("Handler must be function")
 	}
 
-	requestObjType := goo.GetType(requestObject)
-	if !requestObjType.IsStruct() {
-		panic("Request object must be struct")
-	}
-	scanRequestObject(requestObjType)
-
 	handlerMethod := &RequestHandler{
 		HandlerFunc: handler,
 	}
 
 	for _, option := range options {
 		option(handlerMethod)
+	}
+
+	if handlerMethod.RequestObject != nil {
+		requestObjType := goo.GetType(handlerMethod.RequestObject)
+		if !requestObjType.IsStruct() {
+			panic("Request object must be struct")
+		}
+		scanRequestObject(requestObjType)
 	}
 
 	if len(handlerMethod.Methods) == 0 {
@@ -154,6 +153,12 @@ func validateRequestStruct(requestStructType string, requestStruct goo.Struct) {
 				panic("Fields could be string, boolean and number types")
 			}
 		}
+	}
+}
+
+func WithRequestObject(requestObject RequestObject) RequestHandlerOption {
+	return func(handler *RequestHandler) {
+		handler.RequestObject = requestObject
 	}
 }
 
