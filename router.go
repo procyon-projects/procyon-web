@@ -15,9 +15,11 @@ type ProcyonRouter struct {
 	ctx                context.ConfigurableApplicationContext
 	handlerMapping     HandlerMapping
 	requestContextPool *sync.Pool
+	generateContextId  bool
+	recoveryActive     bool
 }
 
-func NewProcyonRouterForBenchmark(context context.ConfigurableApplicationContext, handlerRegistry SimpleHandlerRegistry) *ProcyonRouter {
+func newProcyonRouterForBenchmark(context context.ConfigurableApplicationContext, handlerRegistry SimpleHandlerRegistry) *ProcyonRouter {
 	router := &ProcyonRouter{
 		ctx: context,
 		requestContextPool: &sync.Pool{
@@ -40,6 +42,8 @@ func NewProcyonRouter(context context.ConfigurableApplicationContext) *ProcyonRo
 		requestContextPool: &sync.Pool{
 			New: newWebRequestContext,
 		},
+		generateContextId: true,
+		recoveryActive:    true,
 	}
 	router.registerHandlerAdapter()
 	return router
@@ -54,11 +58,11 @@ func (router *ProcyonRouter) Route(requestCtx *fasthttp.RequestCtx) {
 	requestContext := router.requestContextPool.Get().(*WebRequestContext)
 	requestContext.fastHttpRequestContext = requestCtx
 	// prepare the context
-	requestContext.prepare()
+	requestContext.prepare(router.generateContextId)
 
 	// get handler chain and call all handlers
 	router.handlerMapping.GetHandlerChain(requestContext)
-	requestContext.invoke()
+	requestContext.invoke(router.recoveryActive)
 	requestContext.reset()
 
 	// after it's finished, put the request context to pool back

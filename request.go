@@ -187,7 +187,7 @@ type SimpleHandlerRegistry struct {
 	registryMap map[string][]RequestHandler
 }
 
-func newSimpleHandlerRegistry() SimpleHandlerRegistry {
+func NewSimpleHandlerRegistry() SimpleHandlerRegistry {
 	return SimpleHandlerRegistry{
 		registryMap: make(map[string][]RequestHandler),
 	}

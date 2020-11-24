@@ -61,7 +61,7 @@ func NewProcyonWebServerForBenchmark(handlerRegistry SimpleHandlerRegistry) *Pro
 	ctx := NewProcyonServerApplicationContext(context.ApplicationId(appId.String()), context.ContextId(contextId.String()))
 
 	server := &ProcyonWebServer{
-		router: NewProcyonRouterForBenchmark(ctx.BaseApplicationContext, handlerRegistry),
+		router: newProcyonRouterForBenchmark(ctx.BaseApplicationContext, handlerRegistry),
 	}
 	return server
 }

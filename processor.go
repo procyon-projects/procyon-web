@@ -19,7 +19,7 @@ func (processor RequestHandlerMappingProcessor) BeforePeaInitialization(peaName 
 		return nil, nil
 	}
 	if controller, ok := pea.(Controller); ok {
-		handlerRegistry := newSimpleHandlerRegistry()
+		handlerRegistry := NewSimpleHandlerRegistry()
 		controller.RegisterHandlers(handlerRegistry)
 		processor.processHandler(handlerRegistry)
 	}

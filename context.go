@@ -89,9 +89,11 @@ func newWebRequestContext() interface{} {
 	}
 }
 
-func (ctx *WebRequestContext) prepare() {
-	core.GenerateUUID(ctx.contextIdBuffer[:])
-	ctx.contextIdStr = core.BytesToStr(ctx.contextIdBuffer[:])
+func (ctx *WebRequestContext) prepare(generateContextId bool) {
+	if generateContextId {
+		core.GenerateUUID(ctx.contextIdBuffer[:])
+		ctx.contextIdStr = core.BytesToStr(ctx.contextIdBuffer[:])
+	}
 }
 
 func (ctx *WebRequestContext) reset() {
@@ -131,9 +133,13 @@ func (ctx *WebRequestContext) writeResponse() {
 	}
 }
 
-func (ctx *WebRequestContext) invoke() {
-	defer recoveryFunction(ctx)
-	ctx.Next()
+func (ctx *WebRequestContext) invoke(recoveryActive bool) {
+	if recoveryActive {
+		defer recoveryFunction(ctx)
+		ctx.Next()
+	} else {
+		ctx.Next()
+	}
 }
 
 func (ctx *WebRequestContext) Next() {

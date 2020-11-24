@@ -34,6 +34,9 @@ func benchRequest(b *testing.B, router fasthttp.RequestHandler, r *http.Request)
 
 	req := fasthttp.AcquireRequest()
 	req.SetRequestURI(r.RequestURI)
+	var data = []byte("{\"productName\":\"Test\",\"categoryId\":2}")
+	req.SetBody(data)
+	req.Header.SetContentType("application/json")
 
 	ctx := &fasthttp.RequestCtx{}
 	ctx.Request = *req
@@ -46,12 +49,28 @@ func benchRequest(b *testing.B, router fasthttp.RequestHandler, r *http.Request)
 	}
 }
 
+type Request struct {
+	Body struct {
+		Name     string `json:"productName" yaml:"productName"`
+		Category int    `json:"categoryId" yaml:"categoryId"`
+	} `request:"body"`
+	PathVariables struct {
+		ProductId int `json:"productId" yaml:"productId"`
+	} `request:"path"`
+	RequestParams struct {
+		Order string `json:"order" yaml:"order"`
+	} `request:"param"`
+	Header struct {
+		ContentType string `json:"Content-Type" yaml:"Content-Type"`
+	} `request:"header"`
+}
+
 func procyonHandleFunc(context *WebRequestContext) {
 }
 
 func setUpProcyonSingle(method RequestMethod, path string, handlerFunc RequestHandlerFunction) fasthttp.RequestHandler {
-	handlerRegistry := newSimpleHandlerRegistry()
-	handlerRegistry.Register(NewHandler(handlerFunc, WithMethod(method), WithPath(path)))
+	handlerRegistry := NewSimpleHandlerRegistry()
+	handlerRegistry.Register(NewHandler(handlerFunc, WithRequestObject(Request{}), WithMethod(method), WithPath(path)))
 	server := NewProcyonWebServerForBenchmark(handlerRegistry)
 	if server != nil {
 		return server.handle
