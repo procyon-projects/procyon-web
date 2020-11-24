@@ -27,10 +27,10 @@ func (server *ProcyonWebServer) SetProperties(properties *configure.WebServerPro
 }
 
 func (server *ProcyonWebServer) Run() error {
-	return fasthttp.ListenAndServe(":"+strconv.Itoa(server.GetPort()), server.handle)
+	return fasthttp.ListenAndServe(":"+strconv.Itoa(server.GetPort()), server.Handle)
 }
 
-func (server *ProcyonWebServer) handle(ctx *fasthttp.RequestCtx) {
+func (server *ProcyonWebServer) Handle(ctx *fasthttp.RequestCtx) {
 	server.router.Route(ctx)
 }
 

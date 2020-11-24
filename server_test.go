@@ -73,7 +73,7 @@ func setUpProcyonSingle(method RequestMethod, path string, handlerFunc RequestHa
 	handlerRegistry.Register(NewHandler(handlerFunc, WithRequestObject(Request{}), WithMethod(method), WithPath(path)))
 	server := NewProcyonWebServerForBenchmark(handlerRegistry)
 	if server != nil {
-		return server.handle
+		return server.Handle
 	}
 	return nil
 }
