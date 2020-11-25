@@ -3,15 +3,17 @@ package web
 type MediaType byte
 
 const (
-	DefaultMediaType                   = MediaTypeApplicationJson
-	MediaTypeApplicationJson MediaType = 0
-	MediaTypeApplicationXml  MediaType = 1
+	DefaultMediaType                       = MediaTypeApplicationTextHtml
+	MediaTypeApplicationTextHtml MediaType = 0
+	MediaTypeApplicationJson     MediaType = 0
+	MediaTypeApplicationXml      MediaType = 1
 )
 
 const (
-	DefaultMediaTypeValue         = MediaTypeApplicationJsonValue
-	MediaTypeApplicationXmlValue  = "application/xml"
-	MediaTypeApplicationJsonValue = "application/json"
+	DefaultMediaTypeValue             = MediaTypeApplicationTextHtmlValue
+	MediaTypeApplicationTextHtmlValue = "text/html"
+	MediaTypeApplicationXmlValue      = "application/xml"
+	MediaTypeApplicationJsonValue     = "application/json"
 )
 
 type ResponseHeaderBuilder interface {

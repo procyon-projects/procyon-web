@@ -118,6 +118,16 @@ func (ctx *WebRequestContext) writeResponse() {
 			ctx.ThrowError(err)
 		}
 		ctx.fastHttpRequestContext.SetBody(result)
+	} else if ctx.responseEntity.contentType == MediaTypeApplicationTextHtml {
+		ctx.fastHttpRequestContext.SetContentType(MediaTypeApplicationTextHtmlValue)
+		if ctx.responseEntity.body == nil {
+			return
+		}
+		switch ctx.responseEntity.body.(type) {
+		case string:
+			value := []byte(ctx.responseEntity.body.(string))
+			ctx.fastHttpRequestContext.SetBody(value)
+		}
 	} else {
 		ctx.fastHttpRequestContext.SetContentType(MediaTypeApplicationXmlValue)
 

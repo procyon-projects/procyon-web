@@ -20,7 +20,7 @@ type RequestObjectCache struct {
 	fields           []goo.Field
 }
 
-type RequestObject interface{}
+type RequestHandlerObject interface{}
 type RequestHandlerFunction = func(context *WebRequestContext)
 type RequestHandlerOption func(handler *RequestHandler)
 
@@ -39,12 +39,12 @@ const (
 
 type RequestHandler struct {
 	Path          string
-	Methods       []RequestMethod
+	Method        RequestMethod
 	HandlerFunc   RequestHandlerFunction
-	RequestObject RequestObject
+	RequestObject RequestHandlerObject
 }
 
-func NewHandler(handler RequestHandlerFunction, options ...RequestHandlerOption) RequestHandler {
+func newHandler(handler RequestHandlerFunction, method RequestMethod, options ...RequestHandlerOption) RequestHandler {
 	if handler == nil {
 		panic("Handler must not be null")
 	}
@@ -54,26 +54,52 @@ func NewHandler(handler RequestHandlerFunction, options ...RequestHandlerOption)
 		panic("Handler must be function")
 	}
 
-	handlerMethod := &RequestHandler{
+	requestHandler := &RequestHandler{
 		HandlerFunc: handler,
+		Method:      method,
 	}
 
-	for _, option := range options {
-		option(handlerMethod)
-	}
-
-	if handlerMethod.RequestObject != nil {
-		requestObjType := goo.GetType(handlerMethod.RequestObject)
+	if requestHandler.RequestObject != nil {
+		requestObjType := goo.GetType(requestHandler.RequestObject)
 		if !requestObjType.IsStruct() {
 			panic("Request object must be struct")
 		}
 		scanRequestObject(requestObjType)
 	}
 
-	if len(handlerMethod.Methods) == 0 {
-		handlerMethod.Methods = []RequestMethod{RequestMethodGet}
+	for _, option := range options {
+		option(requestHandler)
 	}
-	return *handlerMethod
+
+	return *requestHandler
+}
+
+func Get(handler RequestHandlerFunction, options ...RequestHandlerOption) RequestHandler {
+	return newHandler(handler, RequestMethodGet, options...)
+}
+
+func Post(handler RequestHandlerFunction, options ...RequestHandlerOption) RequestHandler {
+	return newHandler(handler, RequestMethodPost, options...)
+}
+
+func Put(handler RequestHandlerFunction, options ...RequestHandlerOption) RequestHandler {
+	return newHandler(handler, RequestMethodPut, options...)
+}
+
+func Delete(handler RequestHandlerFunction, options ...RequestHandlerOption) RequestHandler {
+	return newHandler(handler, RequestMethodDelete, options...)
+}
+
+func Patch(handler RequestHandlerFunction, options ...RequestHandlerOption) RequestHandler {
+	return newHandler(handler, RequestMethodPatch, options...)
+}
+
+func Options(handler RequestHandlerFunction, options ...RequestHandlerOption) RequestHandler {
+	return newHandler(handler, RequestMethodOptions, options...)
+}
+
+func Head(handler RequestHandlerFunction, options ...RequestHandlerOption) RequestHandler {
+	return newHandler(handler, RequestMethodHead, options...)
 }
 
 func scanRequestObject(requestObjType goo.Type) {
@@ -156,25 +182,15 @@ func validateRequestStruct(requestStructType string, requestStruct goo.Struct) {
 	}
 }
 
-func WithRequestObject(requestObject RequestObject) RequestHandlerOption {
+func RequestObject(requestObject RequestHandlerObject) RequestHandlerOption {
 	return func(handler *RequestHandler) {
 		handler.RequestObject = requestObject
 	}
 }
 
-func WithPath(path string) RequestHandlerOption {
+func Path(path string) RequestHandlerOption {
 	return func(handler *RequestHandler) {
 		handler.Path = path
-	}
-}
-
-func WithMethod(methods ...RequestMethod) RequestHandlerOption {
-	return func(handler *RequestHandler) {
-		if len(methods) > 0 {
-			handler.Methods = methods
-		} else {
-			handler.Methods = []RequestMethod{RequestMethodGet}
-		}
 	}
 }
 
@@ -201,6 +217,13 @@ func (registry SimpleHandlerRegistry) RegisterGroup(prefix string, info ...Reque
 	if len(info) == 0 {
 		return
 	}
+
+	for _, handler := range info {
+		if prefix+handler.Path == "" {
+			panic("Specify a path or a prefix while registering a request handler")
+		}
+	}
+
 	if registry.registryMap[prefix] == nil {
 		registry.registryMap[prefix] = make([]RequestHandler, 0)
 	}

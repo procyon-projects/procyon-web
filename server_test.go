@@ -68,9 +68,9 @@ type Request struct {
 func procyonHandleFunc(context *WebRequestContext) {
 }
 
-func setUpProcyonSingle(method RequestMethod, path string, handlerFunc RequestHandlerFunction) fasthttp.RequestHandler {
+func setUpProcyonSingle(path string, handlerFunc RequestHandlerFunction) fasthttp.RequestHandler {
 	handlerRegistry := NewSimpleHandlerRegistry()
-	handlerRegistry.Register(NewHandler(handlerFunc, WithRequestObject(Request{}), WithMethod(method), WithPath(path)))
+	handlerRegistry.Register(Get(handlerFunc, RequestObject(Request{}), Path(path)))
 	server := NewProcyonWebServerForBenchmark(handlerRegistry)
 	if server != nil {
 		return server.Handle
@@ -79,7 +79,7 @@ func setUpProcyonSingle(method RequestMethod, path string, handlerFunc RequestHa
 }
 
 func BenchmarkProcyon_Param(b *testing.B) {
-	router := setUpProcyonSingle(RequestMethodGet, "/user/:name", procyonHandleFunc)
+	router := setUpProcyonSingle("/user/:name", procyonHandleFunc)
 
 	request, _ := http.NewRequest("GET", "/user/test", nil)
 	benchRequest(b, router, request)
@@ -89,7 +89,7 @@ const fiveBrace = "/:a/:b/:c/:d/:e"
 const fiveRoute = "/test/test/test/test/test"
 
 func BenchmarkProcyon_Param5(b *testing.B) {
-	router := setUpProcyonSingle("GET", fiveBrace, procyonHandleFunc)
+	router := setUpProcyonSingle(fiveBrace, procyonHandleFunc)
 
 	request, _ := http.NewRequest("GET", fiveRoute, nil)
 	benchRequest(b, router, request)
@@ -99,7 +99,7 @@ const twentyBrace = "/:a/:b/:c/:d/:e/:f/:g/:h/:i/:j/:k/:l/:m/:n/:o/:p/:q/:r/:s/:
 const twentyRoute = "/a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t"
 
 func BenchmarkProcyon_Param20(b *testing.B) {
-	router := setUpProcyonSingle("GET", twentyBrace, procyonHandleFunc)
+	router := setUpProcyonSingle(twentyBrace, procyonHandleFunc)
 
 	request, _ := http.NewRequest("GET", twentyRoute, nil)
 	benchRequest(b, router, request)
