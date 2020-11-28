@@ -40,11 +40,13 @@ func (tree *RouterTree) GetMethodTree(method []byte) *RouterMethodTree {
 }
 
 func (tree *RouterTree) AddRoute(path string, method RequestMethod, handlerChain *HandlerChain) {
+
 	methodNode := tree.GetMethodTree([]byte(method))
 	if methodNode.root == nil {
 		methodNode.root = &RouterPathNode{}
 	}
 	methodNode.add([]byte(path), handlerChain)
+	methodNode.registeredRoutes = append(methodNode.registeredRoutes, path)
 }
 
 func (tree *RouterTree) Get(ctx *WebRequestContext) {
@@ -59,10 +61,20 @@ func (tree *RouterTree) Get(ctx *WebRequestContext) {
 type RouterMethodTree struct {
 	method           []byte
 	root             *RouterPathNode
+	staticRoutes     map[string]*HandlerChain
 	registeredRoutes []string
 }
 
 func (methodTree *RouterMethodTree) add(path []byte, chain *HandlerChain) {
+
+	if bytes.IndexByte(path, ':') == -1 && bytes.IndexByte(path, '*') == -1 {
+		if methodTree.staticRoutes == nil {
+			methodTree.staticRoutes = make(map[string]*HandlerChain, 0)
+		}
+		methodTree.staticRoutes[string(path)] = chain
+		return
+	}
+
 	node := methodTree.root
 	index := 0
 	processed := 0
@@ -70,12 +82,15 @@ func (methodTree *RouterMethodTree) add(path []byte, chain *HandlerChain) {
 	for {
 	begin:
 
-		char := path[index]
 		if index == len(path) {
-			if node.nodeType == PathVariableNode || index-processed == len(node.path) {
+			if (node.nodeType == PathVariableNode || index-processed == len(node.path)) && node.handlerChain != nil {
 				panic("You have already registered the same path : " + string(path))
 			}
+			node.handlerChain = chain
+			return
 		}
+
+		char := path[index]
 
 		if node.nodeType == PathVariableNode {
 
@@ -207,14 +222,14 @@ func (methodTree *RouterMethodTree) add(path []byte, chain *HandlerChain) {
 				node.childNodes = nil
 				node.childNode = nil
 
-				if len(path[tempIndex:]) == 0 {
+				if len(path[index:]) == 0 {
 					node.handlerChain = chain
 					node.addChildNode(splitNode)
 					break
 				}
 
 				node.addChildNode(splitNode)
-				node.handlePathSegment(path[tempIndex:], chain)
+				node.handlePathSegment(path[index:], chain)
 				break
 			}
 		}
@@ -223,8 +238,16 @@ func (methodTree *RouterMethodTree) add(path []byte, chain *HandlerChain) {
 }
 
 func (methodTree *RouterMethodTree) findHandler(ctx *WebRequestContext) {
-	node := methodTree.root
+
 	path := ctx.fastHttpRequestContext.URI().Path()
+	if methodTree.staticRoutes != nil {
+		if chain, ok := methodTree.staticRoutes[core.BytesToStr(path)]; ok {
+			ctx.handlerChain = chain
+			return
+		}
+	}
+
+	node := methodTree.root
 	pathLength := uint(len(path))
 
 	var index uint
