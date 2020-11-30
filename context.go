@@ -69,6 +69,10 @@ type WebRequestContext struct {
 	contextIdBuffer        [36]byte
 	contextIdStr           string
 	fastHttpRequestContext *fasthttp.RequestCtx
+	// cache
+	path []byte
+	args *fasthttp.Args
+	uri  *fasthttp.URI
 	// handler
 	handlerChain  *HandlerChain
 	handlerIndex  int
@@ -186,16 +190,47 @@ func (ctx *WebRequestContext) addPathVariableValue(pathVariableName string) {
 	ctx.pathVariableCount++
 }
 
-func (ctx *WebRequestContext) GetPathVariable(name string) string {
-	return ""
+func (ctx *WebRequestContext) getPathByteArray() []byte {
+	if ctx.uri == nil {
+		ctx.uri = ctx.fastHttpRequestContext.URI()
+		ctx.path = ctx.uri.Path()
+	}
+	return ctx.path
 }
 
-func (ctx *WebRequestContext) GetRequestParameter(name string) string {
-	return ""
+func (ctx *WebRequestContext) GetPath() string {
+	if len(ctx.path) == 0 {
+		return string(ctx.getPathByteArray())
+	}
+	return string(ctx.path)
 }
 
-func (ctx *WebRequestContext) GetHeaderValue(key string) string {
-	return ""
+func (ctx *WebRequestContext) GetPathVariable(name string) (string, bool) {
+	for _, pathVariableName := range ctx.handlerChain.pathVariables {
+		if pathVariableName == name {
+
+		}
+	}
+	return "", false
+}
+
+func (ctx *WebRequestContext) GetRequestParameter(name string) (string, bool) {
+	if ctx.args == nil {
+		ctx.args = ctx.fastHttpRequestContext.QueryArgs()
+	}
+	result := ctx.args.Peek(name)
+	if result == nil {
+		return "", false
+	}
+	return string(result), true
+}
+
+func (ctx *WebRequestContext) GetHeaderValue(key string) (string, bool) {
+	val := ctx.fastHttpRequestContext.Request.Header.Peek(key)
+	if val == nil {
+		return "", false
+	}
+	return string(val), true
 }
 
 func (ctx *WebRequestContext) GetRequest(request interface{}) {

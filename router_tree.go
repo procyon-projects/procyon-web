@@ -17,7 +17,7 @@ func newRouterTree() *RouterTree {
 	router.createMethodTree([]byte(RequestMethodPatch))
 	router.createMethodTree([]byte(RequestMethodDelete))
 	router.createMethodTree([]byte(RequestMethodHead))
-	router.createMethodTree([]byte(RequestMethodDelete))
+	router.createMethodTree([]byte(RequestMethodOptions))
 	return router
 }
 
@@ -239,7 +239,7 @@ func (methodTree *RouterMethodTree) add(path []byte, chain *HandlerChain) {
 
 func (methodTree *RouterMethodTree) findHandler(ctx *WebRequestContext) {
 
-	path := ctx.fastHttpRequestContext.URI().Path()
+	path := ctx.getPathByteArray()
 	if methodTree.staticRoutes != nil {
 		if chain, ok := methodTree.staticRoutes[core.BytesToStr(path)]; ok {
 			ctx.handlerChain = chain
