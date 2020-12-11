@@ -6,6 +6,19 @@ import (
 )
 
 type requestObject struct {
+	Body struct {
+		Name     string `json:"productName" yaml:"productName"`
+		Category int    `json:"categoryId" yaml:"categoryId"`
+	} `request:"body"`
+	PathVariables struct {
+		ProductId int `json:"productId" yaml:"productId"`
+	} `request:"path"`
+	RequestParams struct {
+		Order string `json:"order" yaml:"order"`
+	} `request:"param"`
+	Header struct {
+		ContentType string `json:"Content-Type" yaml:"Content-Type"`
+	} `request:"header"`
 }
 
 func handlerFunction(ctx *WebRequestContext) {

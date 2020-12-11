@@ -59,16 +59,16 @@ func newHandler(handler RequestHandlerFunction, method RequestMethod, options ..
 		Method:      method,
 	}
 
+	for _, option := range options {
+		option(requestHandler)
+	}
+
 	if requestHandler.RequestObject != nil {
 		requestObjType := goo.GetType(requestHandler.RequestObject)
 		if !requestObjType.IsStruct() {
 			panic("Request object must be struct")
 		}
 		scanRequestObject(requestObjType)
-	}
-
-	for _, option := range options {
-		option(requestHandler)
 	}
 
 	return *requestHandler
