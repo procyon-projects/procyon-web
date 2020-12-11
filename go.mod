@@ -13,6 +13,7 @@ require (
 	github.com/procyon-projects/procyon-configure v0.0.0-20201130222109-be939fa5a608
 	github.com/procyon-projects/procyon-context v0.0.0-20201203222918-8a3b84b811f9
 	github.com/procyon-projects/procyon-core v0.0.0-20201203210426-57669e824045
+	github.com/stretchr/testify v1.6.1
 	github.com/valyala/fasthttp v1.17.0
 	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776 // indirect
 )
