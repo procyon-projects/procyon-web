@@ -2,6 +2,7 @@ package web
 
 import (
 	"errors"
+	"github.com/codnect/goo"
 	"github.com/stretchr/testify/assert"
 	"github.com/valyala/fasthttp"
 	"net/http"
@@ -144,4 +145,87 @@ func TestWebRequestContext_writeResponseAsXml(t *testing.T) {
 	ctx.writeResponse()
 	assert.Equal(t, "<testResponse><Name>test</Name><Age>25</Age></testResponse>", string(ctx.fastHttpRequestContext.Response.Body()))
 	assert.Equal(t, MediaTypeApplicationXmlValue, string(ctx.fastHttpRequestContext.Response.Header.ContentType()))
+}
+
+func TestWebRequestContext_GetRequestWithNil(t *testing.T) {
+	ctx := newWebRequestContext().(*WebRequestContext)
+	assert.Panics(t, func() {
+		ctx.GetRequest(nil)
+	})
+}
+
+type testRequestObject struct {
+	Body struct {
+		Name string `json:"Name" yaml:"Name"`
+		Age  int    `json:"Age" yaml:"Age"`
+	} `request:"body"`
+}
+
+type testRequestObjectWithOnlyBody struct {
+	Name string `json:"Name" yaml:"Name"`
+	Age  int    `json:"Age" yaml:"Age"`
+}
+
+func TestWebRequestContext_GetRequestForJson(t *testing.T) {
+	ctx := newWebRequestContext().(*WebRequestContext)
+	ctx.fastHttpRequestContext = &fasthttp.RequestCtx{}
+	req := fasthttp.AcquireRequest()
+	req.SetBody([]byte("{\"Name\":\"test\",\"Age\":25}"))
+	req.Header.SetContentType(MediaTypeApplicationJsonValue)
+	ctx.fastHttpRequestContext.Request = *req
+
+	requestObj := &testRequestObject{}
+	scanRequestObject(goo.GetType(requestObj))
+	ctx.GetRequest(requestObj)
+
+	assert.Equal(t, requestObj.Body.Name, "test")
+	assert.Equal(t, requestObj.Body.Age, 25)
+}
+
+func TestWebRequestContext_GetRequestForXml(t *testing.T) {
+	ctx := newWebRequestContext().(*WebRequestContext)
+	ctx.fastHttpRequestContext = &fasthttp.RequestCtx{}
+	req := fasthttp.AcquireRequest()
+	req.SetBody([]byte("<testRequestObject><Name>test</Name><Age>25</Age></testRequestObject>"))
+	req.Header.SetContentType(MediaTypeApplicationXmlValue)
+	ctx.fastHttpRequestContext.Request = *req
+
+	requestObj := &testRequestObject{}
+	scanRequestObject(goo.GetType(requestObj))
+	ctx.GetRequest(requestObj)
+
+	assert.Equal(t, requestObj.Body.Name, "test")
+	assert.Equal(t, requestObj.Body.Age, 25)
+}
+
+func TestWebRequestContext_GetRequestForJson_WithOnlyBody(t *testing.T) {
+	ctx := newWebRequestContext().(*WebRequestContext)
+	ctx.fastHttpRequestContext = &fasthttp.RequestCtx{}
+	req := fasthttp.AcquireRequest()
+	req.SetBody([]byte("{\"Name\":\"test\",\"Age\":25}"))
+	req.Header.SetContentType(MediaTypeApplicationJsonValue)
+	ctx.fastHttpRequestContext.Request = *req
+
+	requestObj := &testRequestObjectWithOnlyBody{}
+	scanRequestObject(goo.GetType(requestObj))
+	ctx.GetRequest(requestObj)
+
+	assert.Equal(t, requestObj.Name, "test")
+	assert.Equal(t, requestObj.Age, 25)
+}
+
+func TestWebRequestContext_GetRequestForXml_WithOnlyBody(t *testing.T) {
+	ctx := newWebRequestContext().(*WebRequestContext)
+	ctx.fastHttpRequestContext = &fasthttp.RequestCtx{}
+	req := fasthttp.AcquireRequest()
+	req.SetBody([]byte("<testRequestObjectWithOnlyBody><Name>test</Name><Age>25</Age></testRequestObjectWithOnlyBody>"))
+	req.Header.SetContentType(MediaTypeApplicationXmlValue)
+	ctx.fastHttpRequestContext.Request = *req
+
+	requestObj := &testRequestObjectWithOnlyBody{}
+	scanRequestObject(goo.GetType(requestObj))
+	ctx.GetRequest(requestObj)
+
+	assert.Equal(t, requestObj.Name, "test")
+	assert.Equal(t, requestObj.Age, 25)
 }

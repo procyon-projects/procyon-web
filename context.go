@@ -277,18 +277,17 @@ func (ctx *WebRequestContext) GetRequest(request interface{}) {
 	if cacheType.bodyFieldIndex != -1 {
 		bodyValue := val.Field(cacheType.bodyFieldIndex)
 		contentType := core.BytesToStr(ctx.fastHttpRequestContext.Request.Header.Peek("Content-Type"))
-		if contentType == DefaultMediaTypeValue || contentType == MediaTypeApplicationJsonValue {
+		if contentType == MediaTypeApplicationJsonValue {
 			err := json.Unmarshal(body, bodyValue.Addr().Interface())
 			if err != nil {
 				ctx.ThrowError(err)
 			}
-		} else {
+		} else if contentType == MediaTypeApplicationXmlValue {
 			err := xml.Unmarshal(body, bodyValue.Addr().Interface())
 			if err != nil {
 				ctx.ThrowError(err)
 			}
 		}
-
 	}
 
 }
