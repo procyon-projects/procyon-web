@@ -48,11 +48,11 @@ func (server *ProcyonWebServer) GetPort() int {
 	return port
 }
 
-func newProcyonWebServer(ctx context.ApplicationContext) (Server, error) {
+func newProcyonWebServer(ctx context.ApplicationContext) Server {
 	server := &ProcyonWebServer{
 		router: NewProcyonRouter(ctx.(context.ConfigurableApplicationContext)),
 	}
-	return server, nil
+	return server
 }
 
 func NewProcyonWebServerForBenchmark(handlerRegistry SimpleHandlerRegistry) *ProcyonWebServer {

@@ -3,7 +3,8 @@ package web
 import "errors"
 
 func recoveryFunction(requestContext *WebRequestContext) {
-	if r := recover(); r != nil {
+	r := recover()
+	if r != nil {
 		if !requestContext.completedFlow {
 			switch val := r.(type) {
 			case string:
@@ -13,8 +14,10 @@ func recoveryFunction(requestContext *WebRequestContext) {
 			default:
 				requestContext.err = errors.New("unknown error")
 			}
-			requestContext.completedFlow = false
-			requestContext.handlerIndex = requestContext.handlerChain.afterCompletionStartIndex - 1
+			if requestContext.handlerChain != nil {
+				requestContext.handlerIndex = requestContext.handlerChain.afterCompletionStartIndex - 1
+				requestContext.Next()
+			}
 		}
 	}
 }

@@ -51,11 +51,7 @@ func (ctx *ProcyonServerApplicationContext) FinishConfigure() {
 }
 
 func (ctx *ProcyonServerApplicationContext) createWebServer() error {
-	server, err := newProcyonWebServer(ctx.BaseApplicationContext)
-	if err != nil {
-		return err
-	}
-	ctx.server = server
+	ctx.server = newProcyonWebServer(ctx.BaseApplicationContext)
 	return nil
 }
 

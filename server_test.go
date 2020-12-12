@@ -1,10 +1,29 @@
 package web
 
 import (
+	configure "github.com/procyon-projects/procyon-configure"
+	"github.com/stretchr/testify/assert"
 	"github.com/valyala/fasthttp"
 	"net/http"
 	"testing"
 )
+
+func TestProcyonWebServer(t *testing.T) {
+	webServer := &ProcyonWebServer{}
+
+	assert.Equal(t, 8080, webServer.GetPort())
+	properties := &configure.WebServerProperties{
+		Port: 3000,
+	}
+	webServer.SetProperties(properties)
+	assert.Equal(t, 3000, webServer.GetPort())
+
+	go func() {
+		webServer.Run()
+	}()
+
+	webServer.Stop()
+}
 
 type mockResponseWriter struct{}
 
