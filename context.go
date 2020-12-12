@@ -102,6 +102,9 @@ func (ctx *WebRequestContext) prepare(generateContextId bool) {
 }
 
 func (ctx *WebRequestContext) reset() {
+	ctx.path = nil
+	ctx.uri = nil
+	ctx.args = nil
 	ctx.handlerIndex = 0
 	ctx.pathVariableCount = 0
 	ctx.valueMap = nil
