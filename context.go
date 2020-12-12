@@ -90,6 +90,7 @@ type WebRequestContext struct {
 func newWebRequestContext() interface{} {
 	return &WebRequestContext{
 		handlerIndex: 0,
+		valueMap:     make(map[string]interface{}),
 	}
 }
 
