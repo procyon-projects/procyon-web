@@ -31,9 +31,6 @@ func (processor RequestHandlerMappingProcessor) AfterPeaInitialization(peaName s
 }
 
 func (processor RequestHandlerMappingProcessor) processHandler(handlerRegistry HandlerRegistry) {
-	if handlerRegistry == nil {
-		return
-	}
 	if simpleRegistry, ok := handlerRegistry.(SimpleHandlerRegistry); ok {
 		registryMap := simpleRegistry.getRegistryMap()
 		for prefix, handlers := range registryMap {
