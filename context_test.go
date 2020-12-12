@@ -3,6 +3,7 @@ package web
 import (
 	"errors"
 	"github.com/stretchr/testify/assert"
+	"github.com/valyala/fasthttp"
 	"net/http"
 	"testing"
 )
@@ -108,4 +109,39 @@ func TestWebRequestContext_ThrowError(t *testing.T) {
 	assert.Panics(t, func() {
 		ctx.ThrowError(errors.New("test-error"))
 	})
+}
+
+type testResponse struct {
+	Name string
+	Age  int
+}
+
+func TestWebRequestContext_writeResponseAsTextHtml(t *testing.T) {
+	ctx := newWebRequestContext().(*WebRequestContext)
+	ctx.fastHttpRequestContext = &fasthttp.RequestCtx{}
+	ctx.SetContentType(MediaTypeApplicationTextHtml)
+	ctx.SetBody("test")
+	ctx.writeResponse()
+	assert.Equal(t, "test", string(ctx.fastHttpRequestContext.Response.Body()))
+	assert.Equal(t, MediaTypeApplicationTextHtmlValue, string(ctx.fastHttpRequestContext.Response.Header.ContentType()))
+}
+
+func TestWebRequestContext_writeResponseAsJson(t *testing.T) {
+	ctx := newWebRequestContext().(*WebRequestContext)
+	ctx.fastHttpRequestContext = &fasthttp.RequestCtx{}
+	ctx.SetContentType(MediaTypeApplicationJson)
+	ctx.SetBody(testResponse{"test", 25})
+	ctx.writeResponse()
+	assert.Equal(t, "{\"Name\":\"test\",\"Age\":25}", string(ctx.fastHttpRequestContext.Response.Body()))
+	assert.Equal(t, MediaTypeApplicationJsonValue, string(ctx.fastHttpRequestContext.Response.Header.ContentType()))
+}
+
+func TestWebRequestContext_writeResponseAsXml(t *testing.T) {
+	ctx := newWebRequestContext().(*WebRequestContext)
+	ctx.fastHttpRequestContext = &fasthttp.RequestCtx{}
+	ctx.SetContentType(MediaTypeApplicationXml)
+	ctx.SetBody(testResponse{"test", 25})
+	ctx.writeResponse()
+	assert.Equal(t, "<testResponse><Name>test</Name><Age>25</Age></testResponse>", string(ctx.fastHttpRequestContext.Response.Body()))
+	assert.Equal(t, MediaTypeApplicationXmlValue, string(ctx.fastHttpRequestContext.Response.Header.ContentType()))
 }

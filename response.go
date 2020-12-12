@@ -5,8 +5,8 @@ type MediaType byte
 const (
 	DefaultMediaType                       = MediaTypeApplicationTextHtml
 	MediaTypeApplicationTextHtml MediaType = 0
-	MediaTypeApplicationJson     MediaType = 0
-	MediaTypeApplicationXml      MediaType = 1
+	MediaTypeApplicationJson     MediaType = 1
+	MediaTypeApplicationXml      MediaType = 2
 )
 
 const (
