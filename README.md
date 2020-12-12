@@ -2,7 +2,7 @@
 <img src="https://procyon-projects.github.io/img/logo.png" width="128">
 
 # Procyon Web
-![alt text](https://goreportcard.com/badge/github.com/procyon-projects/procyon-web)
+[![Go Report Card](https://goreportcard.com/badge/github.com/procyon-projects/procyon-web)](https://goreportcard.com/report/github.com/procyon-projects/procyon-web)
 [![codecov](https://codecov.io/gh/procyon-projects/procyon-web/branch/master/graph/badge.svg?token=VDY94TAEKE)](https://codecov.io/gh/procyon-projects/procyon-web)
 [![Build Status](https://travis-ci.com/procyon-projects/procyon-web.svg?branch=master)](https://travis-ci.com/procyon-projects/procyon-web)
 [![Gitter](https://badges.gitter.im/procyon-projects/community.svg)](https://gitter.im/procyon-projects/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
