@@ -1,7 +1,7 @@
 package web
 
 import (
-	"github.com/codnect/goo"
+	"github.com/procyon-projects/goo"
 	"net/http"
 	"reflect"
 	"strings"

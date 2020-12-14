@@ -2,8 +2,8 @@ package web
 
 import (
 	"encoding/xml"
-	"github.com/codnect/goo"
 	json "github.com/json-iterator/go"
+	"github.com/procyon-projects/goo"
 	configure "github.com/procyon-projects/procyon-configure"
 	"github.com/procyon-projects/procyon-context"
 	core "github.com/procyon-projects/procyon-core"

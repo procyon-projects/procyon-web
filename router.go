@@ -1,7 +1,7 @@
 package web
 
 import (
-	"github.com/codnect/goo"
+	"github.com/procyon-projects/goo"
 	context "github.com/procyon-projects/procyon-context"
 	"github.com/valyala/fasthttp"
 	"sync"
