@@ -10,10 +10,6 @@ func NewRequestHandlerMappingProcessor(mapping RequestHandlerMapping) RequestHan
 	}
 }
 
-func (processor RequestHandlerMappingProcessor) AfterProperties() {
-
-}
-
 func (processor RequestHandlerMappingProcessor) BeforePeaInitialization(peaName string, pea interface{}) (interface{}, error) {
 	if pea == nil {
 		return nil, nil
@@ -39,4 +35,29 @@ func (processor RequestHandlerMappingProcessor) processHandler(handlerRegistry H
 			}
 		}
 	}
+}
+
+type HandlerInterceptorProcessor struct {
+	interceptorRegistry HandlerInterceptorRegistry
+}
+
+func NewHandlerInterceptorProcessor(interceptorRegistry HandlerInterceptorRegistry) HandlerInterceptorProcessor {
+	return HandlerInterceptorProcessor{
+		interceptorRegistry,
+	}
+}
+
+func (processor HandlerInterceptorProcessor) BeforePeaInitialization(peaName string, pea interface{}) (interface{}, error) {
+	if pea == nil {
+		return nil, nil
+	}
+
+	if processor.interceptorRegistry != nil {
+		processor.interceptorRegistry.RegisterHandlerInterceptor(pea)
+	}
+	return pea, nil
+}
+
+func (processor HandlerInterceptorProcessor) AfterPeaInitialization(peaName string, pea interface{}) (interface{}, error) {
+	return pea, nil
 }

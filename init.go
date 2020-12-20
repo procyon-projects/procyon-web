@@ -9,4 +9,7 @@ func init() {
 	core.Register(NewRequestHandlerMapping)
 	/* Request Handler Mapping Processor */
 	core.Register(NewRequestHandlerMappingProcessor)
+	/* Handler Interceptor Registry & Processor */
+	core.Register(NewSimpleHandlerInterceptorRegistry)
+	core.Register(NewHandlerInterceptorProcessor)
 }
