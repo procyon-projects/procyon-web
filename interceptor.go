@@ -38,15 +38,15 @@ type SimpleHandlerInterceptorRegistry struct {
 	afterCompletionInterceptors []*handlerInterceptorData
 }
 
-func NewSimpleHandlerInterceptorRegistry() SimpleHandlerInterceptorRegistry {
-	return SimpleHandlerInterceptorRegistry{
+func NewSimpleHandlerInterceptorRegistry() *SimpleHandlerInterceptorRegistry {
+	return &SimpleHandlerInterceptorRegistry{
 		beforeInterceptors:          make([]*handlerInterceptorData, 0),
 		afterInterceptors:           make([]*handlerInterceptorData, 0),
 		afterCompletionInterceptors: make([]*handlerInterceptorData, 0),
 	}
 }
 
-func (registry SimpleHandlerInterceptorRegistry) RegisterHandlerInterceptor(interceptor interface{}) {
+func (registry *SimpleHandlerInterceptorRegistry) RegisterHandlerInterceptor(interceptor interface{}) {
 	priority := core.PriorityLowest
 	if obj, ok := interceptor.(core.Priority); ok {
 		priority = obj.GetPriority()
@@ -65,7 +65,7 @@ func (registry SimpleHandlerInterceptorRegistry) RegisterHandlerInterceptor(inte
 	}
 }
 
-func (registry SimpleHandlerInterceptorRegistry) registerHandlerInterceptorBefore(priority core.PriorityValue,
+func (registry *SimpleHandlerInterceptorRegistry) registerHandlerInterceptorBefore(priority core.PriorityValue,
 	interceptor HandlerInterceptor) {
 	interceptorIndex := 0
 	for index, registeredInterceptor := range registry.beforeInterceptors {
@@ -79,7 +79,7 @@ func (registry SimpleHandlerInterceptorRegistry) registerHandlerInterceptorBefor
 	registry.beforeInterceptors[interceptorIndex] = newHandlerInterceptorData(interceptor, priority)
 }
 
-func (registry SimpleHandlerInterceptorRegistry) registerHandlerInterceptorAfter(priority core.PriorityValue,
+func (registry *SimpleHandlerInterceptorRegistry) registerHandlerInterceptorAfter(priority core.PriorityValue,
 	interceptor HandlerInterceptor) {
 	interceptorIndex := 0
 	for index, registeredInterceptor := range registry.afterInterceptors {
@@ -93,7 +93,7 @@ func (registry SimpleHandlerInterceptorRegistry) registerHandlerInterceptorAfter
 	registry.afterInterceptors[interceptorIndex] = newHandlerInterceptorData(interceptor, priority)
 }
 
-func (registry SimpleHandlerInterceptorRegistry) registerHandlerInterceptorAfterCompletion(priority core.PriorityValue,
+func (registry *SimpleHandlerInterceptorRegistry) registerHandlerInterceptorAfterCompletion(priority core.PriorityValue,
 	interceptor HandlerInterceptor) {
 	interceptorIndex := 0
 	for index, registeredInterceptor := range registry.afterCompletionInterceptors {
