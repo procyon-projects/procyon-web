@@ -2,7 +2,7 @@ package web
 
 import core "github.com/procyon-projects/procyon-core"
 
-type HandlerInterceptor func(requestContext *WebRequestContext)
+type HandlerInterceptor HandlerFunction
 
 type HandlerInterceptorBefore interface {
 	HandleBefore(requestContext *WebRequestContext)
@@ -30,6 +30,9 @@ func newHandlerInterceptorData(interceptorFunction HandlerInterceptor, priority 
 
 type HandlerInterceptorRegistry interface {
 	RegisterHandlerInterceptor(interceptorInstance interface{})
+	GetHandlerBeforeInterceptors() []HandlerInterceptor
+	GetHandlerAfterInterceptors() []HandlerInterceptor
+	GetHandlerAfterCompletionInterceptors() []HandlerInterceptor
 }
 
 type SimpleHandlerInterceptorRegistry struct {
@@ -83,7 +86,7 @@ func (registry *SimpleHandlerInterceptorRegistry) registerHandlerInterceptorAfte
 	interceptor HandlerInterceptor) {
 	interceptorIndex := 0
 	for index, registeredInterceptor := range registry.afterInterceptors {
-		if registeredInterceptor.priority > priority {
+		if registeredInterceptor.priority < priority {
 			interceptorIndex = index
 		}
 	}
@@ -97,7 +100,7 @@ func (registry *SimpleHandlerInterceptorRegistry) registerHandlerInterceptorAfte
 	interceptor HandlerInterceptor) {
 	interceptorIndex := 0
 	for index, registeredInterceptor := range registry.afterCompletionInterceptors {
-		if registeredInterceptor.priority > priority {
+		if registeredInterceptor.priority < priority {
 			interceptorIndex = index
 		}
 	}
@@ -105,4 +108,28 @@ func (registry *SimpleHandlerInterceptorRegistry) registerHandlerInterceptorAfte
 	registry.afterCompletionInterceptors = append(registry.afterCompletionInterceptors, nil)
 	copy(registry.afterCompletionInterceptors[interceptorIndex+1:], registry.afterCompletionInterceptors[interceptorIndex:])
 	registry.afterCompletionInterceptors[interceptorIndex] = newHandlerInterceptorData(interceptor, priority)
+}
+
+func (registry *SimpleHandlerInterceptorRegistry) GetHandlerBeforeInterceptors() []HandlerInterceptor {
+	interceptors := make([]HandlerInterceptor, 0)
+	for _, interceptorData := range registry.beforeInterceptors {
+		interceptors = append(interceptors, interceptorData.interceptorFunction)
+	}
+	return interceptors
+}
+
+func (registry *SimpleHandlerInterceptorRegistry) GetHandlerAfterInterceptors() []HandlerInterceptor {
+	interceptors := make([]HandlerInterceptor, 0)
+	for _, interceptorData := range registry.afterInterceptors {
+		interceptors = append(interceptors, interceptorData.interceptorFunction)
+	}
+	return interceptors
+}
+
+func (registry *SimpleHandlerInterceptorRegistry) GetHandlerAfterCompletionInterceptors() []HandlerInterceptor {
+	interceptors := make([]HandlerInterceptor, 0)
+	for _, interceptorData := range registry.afterCompletionInterceptors {
+		interceptors = append(interceptors, interceptorData.interceptorFunction)
+	}
+	return interceptors
 }

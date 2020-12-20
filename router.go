@@ -4,6 +4,7 @@ import (
 	"github.com/procyon-projects/goo"
 	context "github.com/procyon-projects/procyon-context"
 	"github.com/valyala/fasthttp"
+	"net/http"
 	"sync"
 )
 
@@ -26,7 +27,7 @@ func newProcyonRouterForBenchmark(context context.ConfigurableApplicationContext
 			New: newWebRequestContext,
 		},
 	}
-	router.handlerMapping = NewRequestHandlerMapping(NewRequestMappingRegistry())
+	router.handlerMapping = NewRequestHandlerMapping(NewRequestMappingRegistry(), nil)
 	registryMap := handlerRegistry.getRegistryMap()
 	for _, handlers := range registryMap {
 		for _, handler := range handlers {
@@ -62,6 +63,16 @@ func (router *ProcyonRouter) Route(requestCtx *fasthttp.RequestCtx) {
 
 	// get handler chain and call all handlers
 	router.handlerMapping.GetHandlerChain(requestContext)
+
+	if requestContext.handlerChain == nil {
+		requestContext.SetStatus(http.StatusNotFound)
+		requestContext.writeResponse()
+
+		requestContext.reset()
+		router.requestContextPool.Put(requestContext)
+		return
+	}
+
 	requestContext.invoke(router.recoveryActive)
 	requestContext.reset()
 

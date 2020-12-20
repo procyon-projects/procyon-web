@@ -4,8 +4,7 @@ type HandlerFunction func(requestContext *WebRequestContext)
 
 type HandlerChain struct {
 	handler                   RequestHandlerFunction
-	interceptors              []HandlerInterceptor
-	allHandlers               []HandlerFunction
+	handlers                  []HandlerFunction
 	handlerIndex              int
 	afterStartIndex           int
 	afterCompletionStartIndex int
@@ -13,10 +12,9 @@ type HandlerChain struct {
 	pathVariables             []string
 }
 
-func NewHandlerChain(fun RequestHandlerFunction) *HandlerChain {
+func NewHandlerChain(fun RequestHandlerFunction, interceptorRegistry HandlerInterceptorRegistry) *HandlerChain {
 	chain := &HandlerChain{
 		fun,
-		make([]HandlerInterceptor, 0),
 		make([]HandlerFunction, 0),
 		0,
 		0,
@@ -24,25 +22,36 @@ func NewHandlerChain(fun RequestHandlerFunction) *HandlerChain {
 		0,
 		nil,
 	}
-	chain.allHandlers = append(chain.allHandlers)
-	chain.handlerIndex = len(chain.allHandlers)
-	chain.allHandlers = append(chain.allHandlers, chain.handler)
-	chain.afterStartIndex = len(chain.allHandlers)
-	chain.afterCompletionStartIndex = len(chain.allHandlers)
-	chain.handlerEndIndex = len(chain.allHandlers) - 1
-	/*for _, interceptor := range chain.interceptors {
-		chain.allHandlers = append(chain.allHandlers, interceptor.HandleBefore)
+
+	if interceptorRegistry != nil {
+		for _, interceptor := range interceptorRegistry.GetHandlerBeforeInterceptors() {
+			chain.handlers = append(chain.handlers, HandlerFunction(interceptor))
+		}
+
+		chain.handlerIndex = len(chain.handlers)
+		chain.handlers = append(chain.handlers, chain.handler)
+
+		chain.afterStartIndex = len(chain.handlers)
+		for _, interceptor := range interceptorRegistry.GetHandlerAfterInterceptors() {
+			chain.handlers = append(chain.handlers, HandlerFunction(interceptor))
+		}
+
+		chain.afterCompletionStartIndex = len(chain.handlers)
+		for _, interceptor := range interceptorRegistry.GetHandlerAfterCompletionInterceptors() {
+			chain.handlers = append(chain.handlers, HandlerFunction(interceptor))
+		}
+
+		chain.handlerEndIndex = len(chain.handlers) - 1
+
+	} else {
+		chain.handlers = append(chain.handlers)
+		chain.handlerIndex = len(chain.handlers)
+
+		chain.handlers = append(chain.handlers, chain.handler)
+		chain.afterStartIndex = len(chain.handlers)
+
+		chain.afterCompletionStartIndex = len(chain.handlers)
+		chain.handlerEndIndex = len(chain.handlers) - 1
 	}
-	chain.handlerIndex = len(chain.allHandlers)
-	chain.allHandlers = append(chain.allHandlers, chain.handler)
-	chain.afterStartIndex = len(chain.allHandlers)
-	for index := len(interceptors) - 1; index >= 0; index-- {
-		chain.allHandlers = append(chain.allHandlers, interceptors[index].HandleAfter)
-	}
-	chain.afterCompletionStartIndex = len(chain.allHandlers)
-	for index := len(interceptors) - 1; index >= 0; index-- {
-		chain.allHandlers = append(chain.allHandlers, interceptors[index].AfterCompletion)
-	}
-	chain.handlerEndIndex = len(chain.allHandlers) - 1*/
 	return chain
 }

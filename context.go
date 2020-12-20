@@ -34,7 +34,14 @@ func (ctx *ProcyonServerApplicationContext) Configure() {
 }
 
 func (ctx *ProcyonServerApplicationContext) OnConfigure() {
+	ctx.initializeInterceptors()
 	_ = ctx.createWebServer()
+}
+
+func (ctx *ProcyonServerApplicationContext) initializeInterceptors() {
+	ctx.BaseApplicationContext.GetPeaByType(goo.GetType((*HandlerInterceptorBefore)(nil)))
+	ctx.BaseApplicationContext.GetPeaByType(goo.GetType((*HandlerInterceptorAfter)(nil)))
+	ctx.BaseApplicationContext.GetPeaByType(goo.GetType((*HandlerInterceptorAfterCompletion)(nil)))
 }
 
 func (ctx *ProcyonServerApplicationContext) FinishConfigure() {
@@ -117,6 +124,7 @@ func (ctx *WebRequestContext) writeResponse() {
 		if ctx.responseEntity.body == nil {
 			return
 		}
+
 		result, err := json.Marshal(ctx.responseEntity.body)
 		if err != nil {
 			ctx.ThrowError(err)
@@ -127,6 +135,7 @@ func (ctx *WebRequestContext) writeResponse() {
 		if ctx.responseEntity.body == nil {
 			return
 		}
+
 		switch ctx.responseEntity.body.(type) {
 		case string:
 			value := []byte(ctx.responseEntity.body.(string))
@@ -160,16 +169,19 @@ func (ctx *WebRequestContext) Next() {
 	if ctx.handlerIndex > ctx.handlerChain.handlerIndex {
 		return
 	}
+
 next:
 	if ctx.handlerIndex > ctx.handlerChain.handlerEndIndex {
 		return
 	}
-	ctx.handlerChain.allHandlers[ctx.handlerIndex](ctx)
+
+	ctx.handlerChain.handlers[ctx.handlerIndex](ctx)
 	ctx.handlerIndex++
 	if ctx.handlerIndex == ctx.handlerChain.afterCompletionStartIndex {
 		ctx.writeResponse()
 		ctx.completedFlow = true
 	}
+
 	goto next
 }
 

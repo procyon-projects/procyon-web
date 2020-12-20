@@ -17,7 +17,7 @@ func (controller testController) handle(ctx *WebRequestContext) {
 }
 
 func TestRequestHandlerMappingProcessor(t *testing.T) {
-	handlerMapping := NewRequestHandlerMapping(NewRequestMappingRegistry())
+	handlerMapping := NewRequestHandlerMapping(NewRequestMappingRegistry(), nil)
 	processor := NewRequestHandlerMappingProcessor(handlerMapping)
 
 	pea, err := processor.BeforePeaInitialization("", nil)

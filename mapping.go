@@ -29,17 +29,19 @@ type HandlerMapping interface {
 }
 
 type RequestHandlerMapping struct {
-	mappingRegistry MappingRegistry
+	mappingRegistry     MappingRegistry
+	interceptorRegistry HandlerInterceptorRegistry
 }
 
-func NewRequestHandlerMapping(mappingRegistry MappingRegistry) RequestHandlerMapping {
+func NewRequestHandlerMapping(mappingRegistry MappingRegistry, interceptorRegistry HandlerInterceptorRegistry) RequestHandlerMapping {
 	return RequestHandlerMapping{
-		mappingRegistry: mappingRegistry,
+		mappingRegistry:     mappingRegistry,
+		interceptorRegistry: interceptorRegistry,
 	}
 }
 
 func (requestMapping RequestHandlerMapping) RegisterHandlerMethod(path string, method RequestMethod, handlerFunc RequestHandlerFunction) {
-	requestMapping.mappingRegistry.Register(path, method, NewHandlerChain(handlerFunc))
+	requestMapping.mappingRegistry.Register(path, method, NewHandlerChain(handlerFunc, requestMapping.interceptorRegistry))
 }
 
 func (requestMapping RequestHandlerMapping) GetHandlerChain(ctx *WebRequestContext) {
