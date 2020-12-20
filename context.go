@@ -7,6 +7,7 @@ import (
 	configure "github.com/procyon-projects/procyon-configure"
 	"github.com/procyon-projects/procyon-context"
 	core "github.com/procyon-projects/procyon-core"
+	peas "github.com/procyon-projects/procyon-peas"
 	"github.com/valyala/fasthttp"
 	"net/http"
 	"reflect"
@@ -39,9 +40,36 @@ func (ctx *ProcyonServerApplicationContext) OnConfigure() {
 }
 
 func (ctx *ProcyonServerApplicationContext) initializeInterceptors() {
-	ctx.BaseApplicationContext.GetPeaByType(goo.GetType((*HandlerInterceptorBefore)(nil)))
-	ctx.BaseApplicationContext.GetPeaByType(goo.GetType((*HandlerInterceptorAfter)(nil)))
-	ctx.BaseApplicationContext.GetPeaByType(goo.GetType((*HandlerInterceptorAfterCompletion)(nil)))
+	peaFactory := ctx.BaseApplicationContext.GetPeaFactory()
+	peaDefinitionRegistry := peaFactory.(peas.PeaDefinitionRegistry)
+	peaNames := peaDefinitionRegistry.GetPeaDefinitionNames()
+
+	for _, peaName := range peaNames {
+		peaDefinition := peaDefinitionRegistry.GetPeaDefinition(peaName)
+		if peaDefinition != nil && !ctx.isHandlerInterceptor(peaDefinition.GetPeaType()) {
+			continue
+		}
+		peaFactory.GetPea(peaName)
+	}
+}
+
+func (ctx *ProcyonServerApplicationContext) isHandlerInterceptor(typ goo.Type) bool {
+	peaType := typ
+	if peaType.IsFunction() {
+		peaType = peaType.ToFunctionType().GetFunctionReturnTypes()[0]
+	}
+
+	if peaType.IsStruct() {
+		structType := peaType.ToStructType()
+		if structType.Implements(goo.GetType((*HandlerInterceptorBefore)(nil)).ToInterfaceType()) {
+			return true
+		} else if structType.Implements(goo.GetType((*HandlerInterceptorAfter)(nil)).ToInterfaceType()) {
+			return true
+		} else if structType.Implements(goo.GetType((*HandlerInterceptorAfterCompletion)(nil)).ToInterfaceType()) {
+			return true
+		}
+	}
+	return false
 }
 
 func (ctx *ProcyonServerApplicationContext) FinishConfigure() {
@@ -77,9 +105,8 @@ type WebRequestContext struct {
 	args *fasthttp.Args
 	uri  *fasthttp.URI
 	// handler
-	handlerChain  *HandlerChain
-	handlerIndex  int
-	completedFlow bool
+	handlerChain *HandlerChain
+	handlerIndex int
 	// path variables
 	pathVariables     [20]string
 	pathVariableCount int
@@ -87,7 +114,10 @@ type WebRequestContext struct {
 	responseEntity ResponseEntity
 	err            error
 	// other
-	valueMap map[string]interface{}
+	valueMap  map[string]interface{}
+	canceled  bool
+	completed bool
+	crashed   bool
 }
 
 func newWebRequestContext() interface{} {
@@ -105,6 +135,9 @@ func (ctx *WebRequestContext) prepare(generateContextId bool) {
 }
 
 func (ctx *WebRequestContext) reset() {
+	ctx.crashed = false
+	ctx.canceled = false
+	ctx.completed = false
 	ctx.path = nil
 	ctx.uri = nil
 	ctx.args = nil
@@ -159,15 +192,15 @@ func (ctx *WebRequestContext) writeResponse() {
 func (ctx *WebRequestContext) invoke(recoveryActive bool) {
 	if recoveryActive {
 		defer recoveryFunction(ctx)
-		ctx.Next()
+		ctx.invokeHandlers(false)
 	} else {
-		ctx.Next()
+		ctx.invokeHandlers(false)
 	}
 }
 
-func (ctx *WebRequestContext) Next() {
-	if ctx.handlerIndex > ctx.handlerChain.handlerIndex {
-		return
+func (ctx *WebRequestContext) invokeHandlers(isError bool) {
+	if isError {
+		ctx.writeResponse()
 	}
 
 next:
@@ -176,13 +209,23 @@ next:
 	}
 
 	ctx.handlerChain.handlers[ctx.handlerIndex](ctx)
+	if ctx.handlerIndex < ctx.handlerChain.handlerIndex && ctx.canceled {
+		ctx.handlerIndex = ctx.handlerChain.afterCompletionStartIndex - 1
+	}
+
 	ctx.handlerIndex++
 	if ctx.handlerIndex == ctx.handlerChain.afterCompletionStartIndex {
 		ctx.writeResponse()
-		ctx.completedFlow = true
+		ctx.completed = true
 	}
 
 	goto next
+}
+
+func (ctx *WebRequestContext) Cancel() {
+	if ctx.handlerIndex < ctx.handlerChain.handlerIndex {
+		ctx.canceled = true
+	}
 }
 
 func (ctx *WebRequestContext) GetContextId() context.ContextId {
@@ -373,9 +416,23 @@ func (ctx *WebRequestContext) GetError() error {
 }
 
 func (ctx *WebRequestContext) SetError(err error) {
-	ctx.err = err
+	if err != nil {
+		ctx.err = err
+	}
 }
 
 func (ctx *WebRequestContext) ThrowError(err error) {
 	panic(err)
+}
+
+func (ctx *WebRequestContext) IsSuccess() bool {
+	return !ctx.crashed
+}
+
+func (ctx *WebRequestContext) IsCanceled() bool {
+	return ctx.completed && ctx.canceled
+}
+
+func (ctx *WebRequestContext) IsCompleted() bool {
+	return ctx.completed && !ctx.canceled
 }
