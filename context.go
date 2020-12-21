@@ -189,9 +189,9 @@ func (ctx *WebRequestContext) writeResponse() {
 	}
 }
 
-func (ctx *WebRequestContext) invoke(recoveryActive bool) {
+func (ctx *WebRequestContext) invoke(recoveryActive bool, recoverManager *recoveryManager) {
 	if recoveryActive {
-		defer recoveryFunction(ctx)
+		defer recoverManager.Recover(ctx)
 		ctx.invokeHandlers(false)
 	} else {
 		ctx.invokeHandlers(false)

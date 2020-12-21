@@ -4,7 +4,6 @@ import (
 	"github.com/procyon-projects/goo"
 	context "github.com/procyon-projects/procyon-context"
 	"github.com/valyala/fasthttp"
-	"net/http"
 	"sync"
 )
 
@@ -18,6 +17,7 @@ type ProcyonRouter struct {
 	requestContextPool *sync.Pool
 	generateContextId  bool
 	recoveryActive     bool
+	recoveryManager    *recoveryManager
 }
 
 func newProcyonRouterForBenchmark(context context.ConfigurableApplicationContext, handlerRegistry SimpleHandlerRegistry) *ProcyonRouter {
@@ -46,13 +46,19 @@ func NewProcyonRouter(context context.ConfigurableApplicationContext) *ProcyonRo
 		generateContextId: true,
 		recoveryActive:    true,
 	}
-	router.registerHandlerAdapter()
+	router.configure()
 	return router
 }
 
-func (router *ProcyonRouter) registerHandlerAdapter() {
+func (router *ProcyonRouter) configure() {
 	handlerAdapter := router.ctx.GetSharedPeaType(goo.GetType((*HandlerMapping)(nil)))
 	router.handlerMapping = handlerAdapter.(HandlerMapping)
+
+	router.recoveryManager = newRecoveryManager(router.ctx.GetLogger())
+	errorHandler := router.ctx.GetSharedPeaType(goo.GetType((*ErrorHandler)(nil)))
+	if errorHandler != nil {
+		router.recoveryManager.customErrorHandler = errorHandler.(ErrorHandler)
+	}
 }
 
 func (router *ProcyonRouter) Route(requestCtx *fasthttp.RequestCtx) {
@@ -65,15 +71,13 @@ func (router *ProcyonRouter) Route(requestCtx *fasthttp.RequestCtx) {
 	router.handlerMapping.GetHandlerChain(requestContext)
 
 	if requestContext.handlerChain == nil {
-		requestContext.SetStatus(http.StatusNotFound)
-		requestContext.writeResponse()
-
+		router.recoveryManager.HandleError(HttpErrorNotFound, requestContext)
 		requestContext.reset()
 		router.requestContextPool.Put(requestContext)
 		return
 	}
 
-	requestContext.invoke(router.recoveryActive)
+	requestContext.invoke(router.recoveryActive, router.recoveryManager)
 	requestContext.reset()
 
 	// after it's finished, put the request context to pool back
