@@ -138,6 +138,7 @@ func (ctx *WebRequestContext) prepare(generateContextId bool) {
 func (ctx *WebRequestContext) reset() {
 	ctx.httpError = nil
 	ctx.internalError = nil
+	ctx.handlerChain = nil
 	ctx.crashed = false
 	ctx.canceled = false
 	ctx.completed = false
