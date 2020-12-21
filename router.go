@@ -71,7 +71,9 @@ func (router *ProcyonRouter) Route(requestCtx *fasthttp.RequestCtx) {
 	router.handlerMapping.GetHandlerChain(requestContext)
 
 	if requestContext.handlerChain == nil {
+		router.ctx.GetLogger().Warning(requestContext, "Handler not found : "+string(requestCtx.Path()))
 		router.recoveryManager.HandleError(HttpErrorNotFound, requestContext)
+
 		requestContext.reset()
 		router.requestContextPool.Put(requestContext)
 		return

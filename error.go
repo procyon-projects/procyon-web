@@ -2,9 +2,9 @@ package web
 
 import (
 	"fmt"
-	json "github.com/json-iterator/go"
 	context "github.com/procyon-projects/procyon-context"
 	"net/http"
+	"runtime/debug"
 )
 
 var (
@@ -61,14 +61,12 @@ func NewDefaultErrorHandler(logger context.Logger) DefaultErrorHandler {
 
 func (handler DefaultErrorHandler) HandleError(err error, requestContext *WebRequestContext) {
 	if httpError, ok := err.(*HTTPError); ok {
-		handler.logger.Error(requestContext, err.Error())
 		requestContext.SetStatus(httpError.Code)
+		requestContext.SetBody(httpError)
 	} else {
-		handler.logger.Error(requestContext, err.Error())
-		requestContext.SetStatus(http.StatusInternalServerError)
+		handler.logger.Error(requestContext, err.Error()+"\n"+string(debug.Stack()))
+		requestContext.SetStatus(HttpErrorInternalServerError.Code)
+		requestContext.SetBody(HttpErrorInternalServerError)
 	}
-
-	response, _ := json.Marshal(requestContext.responseEntity.body)
-	requestContext.SetBody(response)
 	requestContext.SetContentType(MediaTypeApplicationJson)
 }
