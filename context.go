@@ -217,7 +217,7 @@ next:
 	if ctx.handlerIndex == ctx.handlerChain.afterCompletionStartIndex {
 
 		if !isError && ctx.err != nil {
-			if recoveryManager != nil {
+			if recoveryManager.customErrorHandler != nil {
 				recoveryManager.customErrorHandler.HandleError(ctx.err, ctx)
 			} else {
 				recoveryManager.defaultErrorHandler.HandleError(ctx.err, ctx)

@@ -51,11 +51,13 @@ func NewProcyonRouter(context context.ConfigurableApplicationContext) *ProcyonRo
 }
 
 func (router *ProcyonRouter) configure() {
-	handlerAdapter := router.ctx.GetSharedPeaType(goo.GetType((*HandlerMapping)(nil)))
+	peaFactory := router.ctx.GetPeaFactory()
+
+	handlerAdapter := peaFactory.GetSharedPeaType(goo.GetType((*HandlerMapping)(nil)))
 	router.handlerMapping = handlerAdapter.(HandlerMapping)
 
 	router.recoveryManager = newRecoveryManager(router.ctx.GetLogger())
-	errorHandler := router.ctx.GetSharedPeaType(goo.GetType((*ErrorHandler)(nil)))
+	errorHandler, _ := peaFactory.GetPeaByType(goo.GetType((*ErrorHandler)(nil)))
 	if errorHandler != nil {
 		router.recoveryManager.customErrorHandler = errorHandler.(ErrorHandler)
 	}
