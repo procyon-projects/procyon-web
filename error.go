@@ -71,5 +71,4 @@ func (handler DefaultErrorHandler) HandleError(err error, requestContext *WebReq
 	response, _ := json.Marshal(requestContext.responseEntity.body)
 	requestContext.SetBody(response)
 	requestContext.SetContentType(MediaTypeApplicationJson)
-	requestContext.writeResponse()
 }

@@ -45,6 +45,11 @@ func (recoveryManager *recoveryManager) HandleError(err error, ctx *WebRequestCo
 			default:
 				recoveryManager.logger.Error(ctx, "unknown error : "+string(debug.Stack()))
 			}
+
+			if recoveryManager.customErrorHandler != nil {
+				recoveryManager.defaultErrorHandler.HandleError(ctx.err, ctx)
+				ctx.writeResponse()
+			}
 		}
 	}()
 
@@ -53,6 +58,7 @@ func (recoveryManager *recoveryManager) HandleError(err error, ctx *WebRequestCo
 	} else {
 		recoveryManager.defaultErrorHandler.HandleError(ctx.err, ctx)
 	}
+	ctx.writeResponse()
 
 	if ctx.handlerChain != nil {
 		ctx.handlerIndex = ctx.handlerChain.afterCompletionStartIndex
