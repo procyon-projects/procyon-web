@@ -65,6 +65,6 @@ func (recoveryManager *recoveryManager) HandleError(err error, ctx *WebRequestCo
 
 	if ctx.handlerChain != nil && ctx.handlerIndex < ctx.handlerChain.handlerIndex {
 		ctx.handlerIndex = ctx.handlerChain.afterCompletionStartIndex
-		ctx.invokeHandlers(true)
+		ctx.invokeHandlers(true, nil)
 	}
 }

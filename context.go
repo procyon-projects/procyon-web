@@ -189,16 +189,16 @@ func (ctx *WebRequestContext) writeResponse() {
 	}
 }
 
-func (ctx *WebRequestContext) invoke(recoveryActive bool, recoverManager *recoveryManager) {
+func (ctx *WebRequestContext) invoke(recoveryActive bool, recoveryManager *recoveryManager) {
 	if recoveryActive {
-		defer recoverManager.Recover(ctx)
-		ctx.invokeHandlers(false)
+		defer recoveryManager.Recover(ctx)
+		ctx.invokeHandlers(false, recoveryManager)
 	} else {
-		ctx.invokeHandlers(false)
+		ctx.invokeHandlers(false, recoveryManager)
 	}
 }
 
-func (ctx *WebRequestContext) invokeHandlers(isError bool) {
+func (ctx *WebRequestContext) invokeHandlers(isError bool, recoveryManager *recoveryManager) {
 	if isError {
 		ctx.writeResponse()
 	}
@@ -215,6 +215,15 @@ next:
 
 	ctx.handlerIndex++
 	if ctx.handlerIndex == ctx.handlerChain.afterCompletionStartIndex {
+
+		if !isError && ctx.err != nil {
+			if recoveryManager != nil {
+				recoveryManager.customErrorHandler.HandleError(ctx.err, ctx)
+			} else {
+				recoveryManager.defaultErrorHandler.HandleError(ctx.err, ctx)
+			}
+		}
+
 		ctx.writeResponse()
 		ctx.completed = true
 	}
@@ -416,13 +425,15 @@ func (ctx *WebRequestContext) GetError() error {
 }
 
 func (ctx *WebRequestContext) SetError(err error) {
-	if err != nil {
+	if err != nil && ctx.handlerIndex <= ctx.handlerChain.handlerIndex {
 		ctx.err = err
 	}
 }
 
 func (ctx *WebRequestContext) ThrowError(err error) {
-	panic(err)
+	if err != nil && ctx.handlerIndex <= ctx.handlerChain.handlerIndex {
+		panic(err)
+	}
 }
 
 func (ctx *WebRequestContext) IsSuccess() bool {
