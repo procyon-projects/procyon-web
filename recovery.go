@@ -23,14 +23,18 @@ func (recoveryManager *recoveryManager) Recover(ctx *WebRequestContext) {
 	if r := recover(); r != nil {
 		ctx.crashed = true
 		switch err := r.(type) {
+		case *HTTPError:
+			ctx.httpError = err
+			recoveryManager.HandleError(ctx.httpError, ctx)
+			return
 		case string:
-			ctx.err = errors.New(err)
+			ctx.internalError = errors.New(err)
 		case error:
-			ctx.err = err
+			ctx.internalError = err
 		default:
-			ctx.err = errors.New("unknown error : \n" + string(debug.Stack()))
+			ctx.internalError = errors.New("unknown error : \n" + string(debug.Stack()))
 		}
-		recoveryManager.HandleError(ctx.err, ctx)
+		recoveryManager.HandleError(ctx.internalError, ctx)
 	}
 }
 
@@ -50,7 +54,7 @@ func (recoveryManager *recoveryManager) HandleError(err error, ctx *WebRequestCo
 
 			recoveryManager.logger.Error(ctx, errText+"\n"+string(debug.Stack()))
 			if recoveryManager.customErrorHandler != nil {
-				recoveryManager.defaultErrorHandler.HandleError(ctx.err, ctx)
+				recoveryManager.defaultErrorHandler.HandleError(err, ctx)
 				ctx.writeResponse()
 			}
 		}
@@ -65,6 +69,6 @@ func (recoveryManager *recoveryManager) HandleError(err error, ctx *WebRequestCo
 
 	if ctx.handlerChain != nil && ctx.handlerIndex < ctx.handlerChain.handlerIndex {
 		ctx.handlerIndex = ctx.handlerChain.afterCompletionStartIndex
-		ctx.invokeHandlers(true, nil)
+		ctx.invokeHandlers(nil)
 	}
 }

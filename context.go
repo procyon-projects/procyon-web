@@ -112,7 +112,8 @@ type WebRequestContext struct {
 	pathVariableCount int
 	// response and error
 	responseEntity ResponseEntity
-	err            error
+	httpError      *HTTPError
+	internalError  error
 	// other
 	valueMap  map[string]interface{}
 	canceled  bool
@@ -192,17 +193,13 @@ func (ctx *WebRequestContext) writeResponse() {
 func (ctx *WebRequestContext) invoke(recoveryActive bool, recoveryManager *recoveryManager) {
 	if recoveryActive {
 		defer recoveryManager.Recover(ctx)
-		ctx.invokeHandlers(false, recoveryManager)
+		ctx.invokeHandlers(recoveryManager)
 	} else {
-		ctx.invokeHandlers(false, recoveryManager)
+		ctx.invokeHandlers(recoveryManager)
 	}
 }
 
-func (ctx *WebRequestContext) invokeHandlers(isError bool, recoveryManager *recoveryManager) {
-	if isError {
-		ctx.writeResponse()
-	}
-
+func (ctx *WebRequestContext) invokeHandlers(recoveryManager *recoveryManager) {
 next:
 	if ctx.handlerIndex > ctx.handlerChain.handlerEndIndex {
 		return
@@ -216,11 +213,11 @@ next:
 	ctx.handlerIndex++
 	if ctx.handlerIndex == ctx.handlerChain.afterCompletionStartIndex {
 
-		if !isError && ctx.err != nil {
+		if ctx.internalError == nil && ctx.httpError != nil {
 			if recoveryManager.customErrorHandler != nil {
-				recoveryManager.customErrorHandler.HandleError(ctx.err, ctx)
+				recoveryManager.customErrorHandler.HandleError(ctx.httpError, ctx)
 			} else {
-				recoveryManager.defaultErrorHandler.HandleError(ctx.err, ctx)
+				recoveryManager.defaultErrorHandler.HandleError(ctx.httpError, ctx)
 			}
 		}
 
@@ -420,13 +417,17 @@ func (ctx *WebRequestContext) Created(location string) ResponseBodyBuilder {
 	return ctx
 }
 
-func (ctx *WebRequestContext) GetError() error {
-	return ctx.err
+func (ctx *WebRequestContext) GetHTTPError() *HTTPError {
+	return ctx.httpError
 }
 
-func (ctx *WebRequestContext) SetError(err error) {
+func (ctx *WebRequestContext) GetInternalError() error {
+	return ctx.internalError
+}
+
+func (ctx *WebRequestContext) SetHTTPError(err *HTTPError) {
 	if err != nil && ctx.handlerIndex <= ctx.handlerChain.handlerIndex {
-		ctx.err = err
+		ctx.httpError = err
 	}
 }
 

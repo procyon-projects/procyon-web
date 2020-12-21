@@ -68,5 +68,6 @@ func (handler DefaultErrorHandler) HandleError(err error, requestContext *WebReq
 		requestContext.SetStatus(HttpErrorInternalServerError.Code)
 		requestContext.SetBody(HttpErrorInternalServerError)
 	}
+
 	requestContext.SetContentType(MediaTypeApplicationJson)
 }
