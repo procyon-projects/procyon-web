@@ -12,12 +12,12 @@ type Router interface {
 }
 
 type ProcyonRouter struct {
-	ctx                context.ConfigurableApplicationContext
-	handlerMapping     HandlerMapping
-	requestContextPool *sync.Pool
-	generateContextId  bool
-	recoveryActive     bool
-	recoveryManager    *recoveryManager
+	ctx                 context.ConfigurableApplicationContext
+	handlerMapping      HandlerMapping
+	requestContextPool  *sync.Pool
+	generateContextId   bool
+	recoveryActive      bool
+	errorHandlerManager *errorHandlerManager
 }
 
 func newProcyonRouterForBenchmark(context context.ConfigurableApplicationContext, handlerRegistry SimpleHandlerRegistry) *ProcyonRouter {
@@ -56,10 +56,10 @@ func (router *ProcyonRouter) configure() {
 	handlerAdapter := peaFactory.GetSharedPeaType(goo.GetType((*HandlerMapping)(nil)))
 	router.handlerMapping = handlerAdapter.(HandlerMapping)
 
-	router.recoveryManager = newRecoveryManager(router.ctx.GetLogger())
+	router.errorHandlerManager = newErrorHandlerManager(router.ctx.GetLogger())
 	errorHandler, _ := peaFactory.GetPeaByType(goo.GetType((*ErrorHandler)(nil)))
 	if errorHandler != nil {
-		router.recoveryManager.customErrorHandler = errorHandler.(ErrorHandler)
+		router.errorHandlerManager.customErrorHandler = errorHandler.(ErrorHandler)
 	}
 }
 
@@ -74,16 +74,15 @@ func (router *ProcyonRouter) Route(requestCtx *fasthttp.RequestCtx) {
 
 	if requestContext.handlerChain == nil {
 		router.ctx.GetLogger().Warning(requestContext, "Handler not found : "+string(requestCtx.Path()))
-		router.recoveryManager.HandleError(HttpErrorNotFound, requestContext)
+		router.errorHandlerManager.HandleError(HttpErrorNotFound, requestContext)
 
 		requestContext.reset()
 		router.requestContextPool.Put(requestContext)
 		return
 	}
 
-	requestContext.invoke(router.recoveryActive, router.recoveryManager)
-	requestContext.reset()
+	requestContext.invoke(router.recoveryActive, router.errorHandlerManager)
 
-	// after it's finished, put the request context to pool back
+	requestContext.reset()
 	router.requestContextPool.Put(requestContext)
 }

@@ -193,16 +193,16 @@ func (ctx *WebRequestContext) writeResponse() {
 	}
 }
 
-func (ctx *WebRequestContext) invoke(recoveryActive bool, recoveryManager *recoveryManager) {
+func (ctx *WebRequestContext) invoke(recoveryActive bool, errorHandlerManager *errorHandlerManager) {
 	if recoveryActive {
-		defer recoveryManager.Recover(ctx)
-		ctx.invokeHandlers(recoveryManager)
+		defer errorHandlerManager.Recover(ctx)
+		ctx.invokeHandlers(errorHandlerManager)
 	} else {
-		ctx.invokeHandlers(recoveryManager)
+		ctx.invokeHandlers(errorHandlerManager)
 	}
 }
 
-func (ctx *WebRequestContext) invokeHandlers(recoveryManager *recoveryManager) {
+func (ctx *WebRequestContext) invokeHandlers(errorHandlerManager *errorHandlerManager) {
 next:
 	if ctx.handlerIndex > ctx.handlerChain.handlerEndIndex {
 		return
@@ -217,10 +217,10 @@ next:
 	if ctx.handlerIndex == ctx.handlerChain.afterCompletionStartIndex {
 
 		if ctx.internalError == nil && ctx.httpError != nil {
-			if recoveryManager.customErrorHandler != nil {
-				recoveryManager.customErrorHandler.HandleError(ctx.httpError, ctx)
+			if errorHandlerManager.customErrorHandler != nil {
+				errorHandlerManager.customErrorHandler.HandleError(ctx.httpError, ctx)
 			} else {
-				recoveryManager.defaultErrorHandler.HandleError(ctx.httpError, ctx)
+				errorHandlerManager.defaultErrorHandler.HandleError(ctx.httpError, ctx)
 			}
 		}
 

@@ -1,6 +1,7 @@
 package web
 
 import (
+	"errors"
 	"fmt"
 	context "github.com/procyon-projects/procyon-context"
 	"net/http"
@@ -70,4 +71,72 @@ func (handler DefaultErrorHandler) HandleError(err error, requestContext *WebReq
 	}
 
 	requestContext.SetContentType(MediaTypeApplicationJson)
+}
+
+type errorHandlerManager struct {
+	defaultErrorHandler ErrorHandler
+	customErrorHandler  ErrorHandler
+	logger              context.Logger
+}
+
+func newErrorHandlerManager(logger context.Logger) *errorHandlerManager {
+	return &errorHandlerManager{
+		defaultErrorHandler: NewDefaultErrorHandler(logger),
+		logger:              logger,
+	}
+}
+
+func (errorHandlerManager *errorHandlerManager) Recover(ctx *WebRequestContext) {
+	if r := recover(); r != nil {
+		ctx.crashed = true
+		switch err := r.(type) {
+		case *HTTPError:
+			ctx.httpError = err
+			errorHandlerManager.HandleError(ctx.httpError, ctx)
+			return
+		case string:
+			ctx.internalError = errors.New(err)
+		case error:
+			ctx.internalError = err
+		default:
+			ctx.internalError = errors.New("unknown error : \n" + string(debug.Stack()))
+		}
+		errorHandlerManager.HandleError(ctx.internalError, ctx)
+	}
+}
+
+func (errorHandlerManager *errorHandlerManager) HandleError(err error, ctx *WebRequestContext) {
+	defer errorHandlerManager.wtf(err, ctx)
+
+	if errorHandlerManager.customErrorHandler != nil {
+		errorHandlerManager.customErrorHandler.HandleError(err, ctx)
+	} else {
+		errorHandlerManager.defaultErrorHandler.HandleError(err, ctx)
+	}
+	ctx.writeResponse()
+
+	if ctx.handlerChain != nil && ctx.handlerIndex < ctx.handlerChain.handlerIndex {
+		ctx.handlerIndex = ctx.handlerChain.afterCompletionStartIndex
+		ctx.invokeHandlers(nil)
+	}
+}
+
+func (errorHandlerManager *errorHandlerManager) wtf(err error, ctx *WebRequestContext) {
+	if r := recover(); r != nil {
+		var errText string
+		switch err := r.(type) {
+		case string:
+			errText = err
+		case error:
+			errText = err.Error()
+		default:
+			errText = "unknown error : "
+		}
+
+		errorHandlerManager.logger.Error(ctx, errText+"\n"+string(debug.Stack()))
+		if errorHandlerManager.customErrorHandler != nil {
+			errorHandlerManager.defaultErrorHandler.HandleError(err, ctx)
+			ctx.writeResponse()
+		}
+	}
 }
