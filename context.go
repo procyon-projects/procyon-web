@@ -297,7 +297,7 @@ func (ctx *WebRequestContext) GetHeaderValue(key string) (string, bool) {
 	return string(val), true
 }
 
-func (ctx *WebRequestContext) GetRequest(request interface{}) {
+func (ctx *WebRequestContext) BindRequest(request interface{}) {
 	typ := reflect.TypeOf(request)
 	if typ == nil {
 		panic("Type cannot be determined as the given object is nil")
@@ -356,12 +356,12 @@ func (ctx *WebRequestContext) GetRequest(request interface{}) {
 
 }
 
-func (ctx *WebRequestContext) SetStatus(status int) ResponseBodyBuilder {
+func (ctx *WebRequestContext) SetResponseStatus(status int) ResponseBodyBuilder {
 	ctx.responseEntity.status = status
 	return ctx
 }
 
-func (ctx *WebRequestContext) SetBody(body interface{}) ResponseBodyBuilder {
+func (ctx *WebRequestContext) SetResponseBody(body interface{}) ResponseBodyBuilder {
 	if body == nil {
 		return ctx
 	}
@@ -369,7 +369,7 @@ func (ctx *WebRequestContext) SetBody(body interface{}) ResponseBodyBuilder {
 	return ctx
 }
 
-func (ctx *WebRequestContext) SetContentType(mediaType MediaType) ResponseBodyBuilder {
+func (ctx *WebRequestContext) SetResponseContentType(mediaType MediaType) ResponseBodyBuilder {
 	ctx.responseEntity.contentType = mediaType
 	return ctx
 }
@@ -378,15 +378,15 @@ func (ctx *WebRequestContext) AddHeader(key string, value string) ResponseHeader
 	return ctx
 }
 
-func (ctx *WebRequestContext) GetStatus() int {
+func (ctx *WebRequestContext) GetResponseStatus() int {
 	return ctx.responseEntity.status
 }
 
-func (ctx *WebRequestContext) GetBody() interface{} {
+func (ctx *WebRequestContext) GetResponseBody() interface{} {
 	return ctx.responseEntity.body
 }
 
-func (ctx *WebRequestContext) GetContentType() MediaType {
+func (ctx *WebRequestContext) GetResponseContentType() MediaType {
 	return ctx.responseEntity.contentType
 }
 
@@ -397,26 +397,31 @@ func (ctx *WebRequestContext) Ok() ResponseBodyBuilder {
 
 func (ctx *WebRequestContext) NotFound() ResponseHeaderBuilder {
 	ctx.responseEntity.status = http.StatusNotFound
+	ctx.httpError = HttpErrorNotFound
 	return ctx
 }
 
 func (ctx *WebRequestContext) NoContent() ResponseHeaderBuilder {
 	ctx.responseEntity.status = http.StatusNoContent
+	ctx.httpError = HttpErrorNoContent
 	return ctx
 }
 
 func (ctx *WebRequestContext) BadRequest() ResponseBodyBuilder {
 	ctx.responseEntity.status = http.StatusBadRequest
+	ctx.httpError = HttpErrorBadRequest
 	return ctx
 }
 
 func (ctx *WebRequestContext) Accepted() ResponseBodyBuilder {
 	ctx.responseEntity.status = http.StatusAccepted
+	ctx.httpError = nil
 	return ctx
 }
 
 func (ctx *WebRequestContext) Created(location string) ResponseBodyBuilder {
 	ctx.responseEntity.status = http.StatusCreated
+	ctx.httpError = nil
 	return ctx
 }
 
@@ -435,9 +440,7 @@ func (ctx *WebRequestContext) SetHTTPError(err *HTTPError) {
 }
 
 func (ctx *WebRequestContext) ThrowError(err error) {
-	if err != nil && ctx.handlerIndex <= ctx.handlerChain.handlerIndex {
-		panic(err)
-	}
+	panic(err)
 }
 
 func (ctx *WebRequestContext) IsSuccess() bool {

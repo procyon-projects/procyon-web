@@ -22,15 +22,15 @@ type ResponseHeaderBuilder interface {
 
 type ResponseBodyBuilder interface {
 	ResponseHeaderBuilder
-	SetStatus(status int) ResponseBodyBuilder
-	SetBody(body interface{}) ResponseBodyBuilder
-	SetContentType(mediaType MediaType) ResponseBodyBuilder
+	SetResponseStatus(status int) ResponseBodyBuilder
+	SetResponseBody(body interface{}) ResponseBodyBuilder
+	SetResponseContentType(mediaType MediaType) ResponseBodyBuilder
 }
 
 type Response interface {
-	GetStatus() int
-	GetBody() interface{}
-	GetContentType() MediaType
+	GetResponseStatus() int
+	GetResponseBody() interface{}
+	GetResponseContentType() MediaType
 }
 
 type ResponseEntity struct {

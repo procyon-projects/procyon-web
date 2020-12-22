@@ -261,7 +261,7 @@ search:
 	for {
 
 		if index == pathLength {
-			if index-processed == node.length {
+			if index-processed == node.length || node.path[node.length-1] == 47 {
 				ctx.handlerChain = node.handlerChain
 			}
 			break

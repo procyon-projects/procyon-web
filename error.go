@@ -9,6 +9,7 @@ import (
 )
 
 var (
+	HttpErrorNoContent             = NewHTTPError(http.StatusNoContent)
 	HttpErrorBadRequest            = NewHTTPError(http.StatusBadRequest)
 	HttpErrorUnauthorized          = NewHTTPError(http.StatusUnauthorized)
 	HttpErrorForbidden             = NewHTTPError(http.StatusForbidden)
@@ -62,15 +63,15 @@ func NewDefaultErrorHandler(logger context.Logger) DefaultErrorHandler {
 
 func (handler DefaultErrorHandler) HandleError(err error, requestContext *WebRequestContext) {
 	if httpError, ok := err.(*HTTPError); ok {
-		requestContext.SetStatus(httpError.Code)
-		requestContext.SetBody(httpError)
+		requestContext.SetResponseStatus(httpError.Code)
+		requestContext.SetResponseBody(httpError)
 	} else {
 		handler.logger.Error(requestContext, err.Error()+"\n"+string(debug.Stack()))
-		requestContext.SetStatus(HttpErrorInternalServerError.Code)
-		requestContext.SetBody(HttpErrorInternalServerError)
+		requestContext.SetResponseStatus(HttpErrorInternalServerError.Code)
+		requestContext.SetResponseBody(HttpErrorInternalServerError)
 	}
 
-	requestContext.SetContentType(MediaTypeApplicationJson)
+	requestContext.SetResponseContentType(MediaTypeApplicationJson)
 }
 
 type errorHandlerManager struct {
