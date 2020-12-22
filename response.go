@@ -23,18 +23,19 @@ type ResponseHeaderBuilder interface {
 type ResponseBodyBuilder interface {
 	ResponseHeaderBuilder
 	SetResponseStatus(status int) ResponseBodyBuilder
-	SetResponseBody(body interface{}) ResponseBodyBuilder
+	SetModel(body interface{}) ResponseBodyBuilder
 	SetResponseContentType(mediaType MediaType) ResponseBodyBuilder
 }
 
 type Response interface {
 	GetResponseStatus() int
+	GetModel() interface{}
 	GetResponseBody() interface{}
 	GetResponseContentType() MediaType
 }
 
 type ResponseEntity struct {
-	body        interface{}
+	model       interface{}
 	status      int
 	contentType MediaType
 }

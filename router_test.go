@@ -293,7 +293,7 @@ func TestRouter(t *testing.T) {
 	router := newRouterTree()
 	for _, route := range githubAPI {
 		handlerChain := NewHandlerChain(func(context *WebRequestContext) {
-			context.SetResponseBody(route.method + ":" + route.path)
+			context.SetModel(route.method + ":" + route.path)
 		}, nil)
 		router.AddRoute(route.path, RequestMethod(route.method), handlerChain)
 	}

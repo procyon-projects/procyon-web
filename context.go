@@ -149,7 +149,7 @@ func (ctx *WebRequestContext) reset() {
 	ctx.pathVariableCount = 0
 	ctx.valueMap = nil
 	ctx.responseEntity.status = http.StatusOK
-	ctx.responseEntity.body = nil
+	ctx.responseEntity.model = nil
 	ctx.responseEntity.contentType = DefaultMediaType
 }
 
@@ -158,34 +158,34 @@ func (ctx *WebRequestContext) writeResponse() {
 	if ctx.responseEntity.contentType == MediaTypeApplicationJson {
 		ctx.fastHttpRequestContext.SetContentType(MediaTypeApplicationJsonValue)
 
-		if ctx.responseEntity.body == nil {
+		if ctx.responseEntity.model == nil {
 			return
 		}
 
-		result, err := json.Marshal(ctx.responseEntity.body)
+		result, err := json.Marshal(ctx.responseEntity.model)
 		if err != nil {
 			ctx.ThrowError(err)
 		}
 		ctx.fastHttpRequestContext.SetBody(result)
 	} else if ctx.responseEntity.contentType == MediaTypeApplicationTextHtml {
 		ctx.fastHttpRequestContext.SetContentType(MediaTypeApplicationTextHtmlValue)
-		if ctx.responseEntity.body == nil {
+		if ctx.responseEntity.model == nil {
 			return
 		}
 
-		switch ctx.responseEntity.body.(type) {
+		switch ctx.responseEntity.model.(type) {
 		case string:
-			value := []byte(ctx.responseEntity.body.(string))
+			value := []byte(ctx.responseEntity.model.(string))
 			ctx.fastHttpRequestContext.SetBody(value)
 		}
 	} else {
 		ctx.fastHttpRequestContext.SetContentType(MediaTypeApplicationXmlValue)
 
-		if ctx.responseEntity.body == nil {
+		if ctx.responseEntity.model == nil {
 			return
 		}
 
-		result, err := xml.Marshal(ctx.responseEntity.body)
+		result, err := xml.Marshal(ctx.responseEntity.model)
 		if err != nil {
 			ctx.ThrowError(err)
 		}
@@ -361,12 +361,16 @@ func (ctx *WebRequestContext) SetResponseStatus(status int) ResponseBodyBuilder 
 	return ctx
 }
 
-func (ctx *WebRequestContext) SetResponseBody(body interface{}) ResponseBodyBuilder {
-	if body == nil {
+func (ctx *WebRequestContext) SetModel(model interface{}) ResponseBodyBuilder {
+	if model == nil {
 		return ctx
 	}
-	ctx.responseEntity.body = body
+	ctx.responseEntity.model = model
 	return ctx
+}
+
+func (ctx *WebRequestContext) GetModel() interface{} {
+	return ctx.responseEntity.model
 }
 
 func (ctx *WebRequestContext) SetResponseContentType(mediaType MediaType) ResponseBodyBuilder {
@@ -383,7 +387,7 @@ func (ctx *WebRequestContext) GetResponseStatus() int {
 }
 
 func (ctx *WebRequestContext) GetResponseBody() interface{} {
-	return ctx.responseEntity.body
+	return ctx.fastHttpRequestContext.Response.Body()
 }
 
 func (ctx *WebRequestContext) GetResponseContentType() MediaType {

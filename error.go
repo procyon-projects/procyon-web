@@ -64,11 +64,11 @@ func NewDefaultErrorHandler(logger context.Logger) DefaultErrorHandler {
 func (handler DefaultErrorHandler) HandleError(err error, requestContext *WebRequestContext) {
 	if httpError, ok := err.(*HTTPError); ok {
 		requestContext.SetResponseStatus(httpError.Code)
-		requestContext.SetResponseBody(httpError)
+		requestContext.SetModel(httpError)
 	} else {
 		handler.logger.Error(requestContext, err.Error()+"\n"+string(debug.Stack()))
 		requestContext.SetResponseStatus(HttpErrorInternalServerError.Code)
-		requestContext.SetResponseBody(HttpErrorInternalServerError)
+		requestContext.SetModel(HttpErrorInternalServerError)
 	}
 
 	requestContext.SetResponseContentType(MediaTypeApplicationJson)

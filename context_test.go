@@ -26,7 +26,7 @@ func TestWebRequestContext_reset(t *testing.T) {
 	ctx.pathVariableCount = 1
 	ctx.valueMap = make(map[string]interface{})
 	ctx.responseEntity.status = http.StatusCreated
-	ctx.responseEntity.body = "test-body"
+	ctx.responseEntity.model = "test-body"
 	ctx.responseEntity.contentType = MediaTypeApplicationJson
 
 	ctx.reset()
@@ -35,7 +35,7 @@ func TestWebRequestContext_reset(t *testing.T) {
 	assert.Equal(t, 0, ctx.pathVariableCount)
 	assert.Nil(t, ctx.valueMap)
 	assert.Equal(t, http.StatusOK, ctx.responseEntity.status)
-	assert.Nil(t, ctx.responseEntity.body)
+	assert.Nil(t, ctx.responseEntity.model)
 	assert.Equal(t, DefaultMediaType, ctx.responseEntity.contentType)
 }
 
@@ -53,8 +53,8 @@ func TestWebRequestContext_Status(t *testing.T) {
 
 func TestWebRequestContext_Body(t *testing.T) {
 	ctx := newWebRequestContext().(*WebRequestContext)
-	ctx.SetResponseBody("test-body")
-	assert.Equal(t, "test-body", ctx.GetResponseBody())
+	ctx.SetModel("test-body")
+	assert.Equal(t, "test-body", ctx.GetModel())
 }
 
 func TestWebRequestContext_ContextType(t *testing.T) {
@@ -121,7 +121,7 @@ func TestWebRequestContext_writeResponseAsTextHtml(t *testing.T) {
 	ctx := newWebRequestContext().(*WebRequestContext)
 	ctx.fastHttpRequestContext = &fasthttp.RequestCtx{}
 	ctx.SetResponseContentType(MediaTypeApplicationTextHtml)
-	ctx.SetResponseBody("test")
+	ctx.SetModel("test")
 	ctx.writeResponse()
 	assert.Equal(t, "test", string(ctx.fastHttpRequestContext.Response.Body()))
 	assert.Equal(t, MediaTypeApplicationTextHtmlValue, string(ctx.fastHttpRequestContext.Response.Header.ContentType()))
@@ -131,7 +131,7 @@ func TestWebRequestContext_writeResponseAsJson(t *testing.T) {
 	ctx := newWebRequestContext().(*WebRequestContext)
 	ctx.fastHttpRequestContext = &fasthttp.RequestCtx{}
 	ctx.SetResponseContentType(MediaTypeApplicationJson)
-	ctx.SetResponseBody(testResponse{"test", 25})
+	ctx.SetModel(testResponse{"test", 25})
 	ctx.writeResponse()
 	assert.Equal(t, "{\"Name\":\"test\",\"Age\":25}", string(ctx.fastHttpRequestContext.Response.Body()))
 	assert.Equal(t, MediaTypeApplicationJsonValue, string(ctx.fastHttpRequestContext.Response.Header.ContentType()))
@@ -141,7 +141,7 @@ func TestWebRequestContext_writeResponseAsXml(t *testing.T) {
 	ctx := newWebRequestContext().(*WebRequestContext)
 	ctx.fastHttpRequestContext = &fasthttp.RequestCtx{}
 	ctx.SetResponseContentType(MediaTypeApplicationXml)
-	ctx.SetResponseBody(testResponse{"test", 25})
+	ctx.SetModel(testResponse{"test", 25})
 	ctx.writeResponse()
 	assert.Equal(t, "<testResponse><Name>test</Name><Age>25</Age></testResponse>", string(ctx.fastHttpRequestContext.Response.Body()))
 	assert.Equal(t, MediaTypeApplicationXmlValue, string(ctx.fastHttpRequestContext.Response.Header.ContentType()))
