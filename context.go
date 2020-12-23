@@ -386,7 +386,7 @@ func (ctx *WebRequestContext) GetResponseStatus() int {
 	return ctx.responseEntity.status
 }
 
-func (ctx *WebRequestContext) GetResponseBody() interface{} {
+func (ctx *WebRequestContext) GetResponseBody() []byte {
 	return ctx.fastHttpRequestContext.Response.Body()
 }
 

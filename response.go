@@ -30,7 +30,7 @@ type ResponseBodyBuilder interface {
 type Response interface {
 	GetResponseStatus() int
 	GetModel() interface{}
-	GetResponseBody() interface{}
+	GetResponseBody() []byte
 	GetResponseContentType() MediaType
 }
 
