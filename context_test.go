@@ -2,7 +2,6 @@ package web
 
 import (
 	"errors"
-	"github.com/procyon-projects/goo"
 	"github.com/stretchr/testify/assert"
 	"github.com/valyala/fasthttp"
 	"net/http"
@@ -191,7 +190,7 @@ func TestWebRequestContext_GetRequestForXml(t *testing.T) {
 	ctx.fastHttpRequestContext.Request = *req
 
 	requestObj := &testRequestObject{}
-	ScanRequestObjectMetadata(goo.GetType(requestObj))
+	ctx.handlerChain = NewHandlerChain(nil, nil, ScanRequestObjectMetadata(requestObj))
 	ctx.BindRequest(requestObj)
 
 	assert.Equal(t, requestObj.Body.Name, "test")
@@ -223,7 +222,7 @@ func TestWebRequestContext_BindRequestForXml_WithOnlyBody(t *testing.T) {
 	ctx.fastHttpRequestContext.Request = *req
 
 	requestObj := &testRequestObjectWithOnlyBody{}
-	ScanRequestObjectMetadata(goo.GetType(requestObj))
+	ctx.handlerChain = NewHandlerChain(nil, nil, ScanRequestObjectMetadata(requestObj))
 	ctx.BindRequest(requestObj)
 
 	assert.Equal(t, requestObj.Name, "test")
