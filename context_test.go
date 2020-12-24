@@ -175,7 +175,7 @@ func TestWebRequestContext_GetRequestForJson(t *testing.T) {
 	ctx.fastHttpRequestContext.Request = *req
 
 	requestObj := &testRequestObject{}
-	ScanRequestObjectMetadata(requestObj)
+	ctx.handlerChain = NewHandlerChain(nil, nil, ScanRequestObjectMetadata(requestObj))
 	ctx.BindRequest(requestObj)
 
 	assert.Equal(t, requestObj.Body.Name, "test")
@@ -207,7 +207,7 @@ func TestWebRequestContext_BindRequestForJson_WithOnlyBody(t *testing.T) {
 	ctx.fastHttpRequestContext.Request = *req
 
 	requestObj := &testRequestObjectWithOnlyBody{}
-	ScanRequestObjectMetadata(requestObj)
+	ctx.handlerChain = NewHandlerChain(nil, nil, ScanRequestObjectMetadata(requestObj))
 	ctx.BindRequest(requestObj)
 
 	assert.Equal(t, requestObj.Name, "test")

@@ -321,7 +321,7 @@ func (ctx *WebRequestContext) BindRequest(request interface{}) {
 	}
 
 	body := ctx.fastHttpRequestContext.Request.Body()
-	if metadata.bodyMetadata.fieldIndex != -1 {
+	if metadata.hasOnlyBody {
 		contentType, ok := ctx.GetHeaderValue("Content-Type")
 		if !ok {
 			contentType = MediaTypeApplicationJsonValue
@@ -346,7 +346,7 @@ func (ctx *WebRequestContext) BindRequest(request interface{}) {
 		val = val.Elem()
 	}
 
-	if metadata.hasOnlyBody {
+	if metadata.bodyMetadata.fieldIndex != -1 {
 		bodyValue := val.Field(metadata.bodyMetadata.fieldIndex)
 		contentType, ok := ctx.GetHeaderValue("Content-Type")
 		if !ok {
