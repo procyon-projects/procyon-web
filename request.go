@@ -3,13 +3,7 @@ package web
 import (
 	"github.com/procyon-projects/goo"
 	"net/http"
-	"reflect"
-	"strings"
-	"sync"
 )
-
-var cacheRequestObject = make(map[reflect.Type]*RequestObjectCache, 0)
-var cacheRequestObjectMu sync.RWMutex
 
 type RequestObjectCache struct {
 	hasOnlyBody      bool
@@ -38,10 +32,11 @@ const (
 )
 
 type RequestHandler struct {
-	Path          string
-	Method        RequestMethod
-	HandlerFunc   RequestHandlerFunction
-	RequestObject RequestHandlerObject
+	Path                  string
+	Method                RequestMethod
+	HandlerFunc           RequestHandlerFunction
+	RequestObject         RequestHandlerObject
+	requestObjectMetadata *RequestObjectMetadata
 }
 
 func newHandler(handler RequestHandlerFunction, method RequestMethod, options ...RequestHandlerOption) RequestHandler {
@@ -64,11 +59,7 @@ func newHandler(handler RequestHandlerFunction, method RequestMethod, options ..
 	}
 
 	if requestHandler.RequestObject != nil {
-		requestObjType := goo.GetType(requestHandler.RequestObject)
-		if !requestObjType.IsStruct() {
-			panic("Request object must be struct")
-		}
-		scanRequestObject(requestObjType)
+		requestHandler.requestObjectMetadata = ScanRequestObjectMetadata(requestHandler.RequestObject)
 	}
 
 	return *requestHandler
@@ -100,86 +91,6 @@ func Options(handler RequestHandlerFunction, options ...RequestHandlerOption) Re
 
 func Head(handler RequestHandlerFunction, options ...RequestHandlerOption) RequestHandler {
 	return newHandler(handler, RequestMethodHead, options...)
-}
-
-func scanRequestObject(requestObjType goo.Type) {
-	structType := requestObjType.ToStructType()
-	if structType.GetFieldCount() == 0 {
-		return
-	}
-	fields := structType.GetFields()
-
-	requestObjcCache := &RequestObjectCache{
-		hasOnlyBody:      false,
-		bodyFieldIndex:   -1,
-		paramFieldIndex:  -1,
-		pathFieldIndex:   -1,
-		headerFieldIndex: -1,
-		fields:           structType.GetFields(),
-	}
-
-	hasField := false
-	requestStruct := false
-	for index, field := range fields {
-		fieldType := field.GetType()
-
-		if fieldType.IsStruct() && strings.HasPrefix(fieldType.GetName(), "struct") {
-			requestStruct = true
-		} else {
-			hasField = true
-		}
-
-		if requestStruct && hasField {
-			panic("Request Object must only consist of untyped request structs or fields completely")
-		}
-
-		if hasField {
-			continue
-		}
-
-		requestTag, err := field.GetTagByName("request")
-
-		if err != nil {
-			panic("Untyped struct must have request tag in Request Object")
-		}
-
-		switch requestTag.Value {
-		case "param":
-			validateRequestStruct(requestTag.Value, field.GetType().ToStructType())
-			requestObjcCache.paramFieldIndex = index
-		case "body":
-			requestObjcCache.bodyFieldIndex = index
-		case "path":
-			validateRequestStruct(requestTag.Value, field.GetType().ToStructType())
-			requestObjcCache.pathFieldIndex = index
-		case "header":
-			validateRequestStruct(requestTag.Value, field.GetType().ToStructType())
-			requestObjcCache.headerFieldIndex = index
-		default:
-			panic("Invalid request tag value")
-		}
-
-	}
-
-	if hasField {
-		requestObjcCache.hasOnlyBody = true
-	}
-	cacheRequestObject[structType.GetGoType()] = requestObjcCache
-}
-
-func validateRequestStruct(requestStructType string, requestStruct goo.Struct) {
-	if requestStruct == nil {
-		return
-	}
-	if "param" == requestStructType || "path" == requestStructType || "header" == requestStructType {
-		fields := requestStruct.GetFields()
-		for _, field := range fields {
-			fieldType := field.GetType()
-			if !fieldType.IsString() && !fieldType.IsBoolean() && !fieldType.IsNumber() {
-				panic("Fields could be string, boolean and number types")
-			}
-		}
-	}
 }
 
 func RequestObject(requestObject RequestHandlerObject) RequestHandlerOption {

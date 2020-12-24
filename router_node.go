@@ -126,7 +126,13 @@ search:
 
 			if path[0] == ':' {
 				child.nodeType = PathVariableNode
-				chain.pathVariables = append(chain.pathVariables, string(pathVariableName))
+				pathVariableName := string(pathVariableName)
+				if len(pathVariableName) == 0 {
+					panic("Path variable cannot be empty " + string(path))
+				}
+				chain.updatePathVariableMetadata(len(chain.pathVariables), pathVariableName)
+				chain.pathVariables = append(chain.pathVariables, pathVariableName)
+
 				node.pathVariableNode = child
 				node.hasPathVariableNode = true
 				node = child
@@ -161,5 +167,9 @@ search:
 		node = child
 		path = path[pathVariableIndex:]
 	}
+
+}
+
+func (node *RouterPathNode) updateMetadata(pathVariableIndex int, pathVariableName string) {
 
 }

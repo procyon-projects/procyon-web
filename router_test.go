@@ -294,7 +294,7 @@ func TestRouter(t *testing.T) {
 	for _, route := range githubAPI {
 		handlerChain := NewHandlerChain(func(context *WebRequestContext) {
 			context.SetModel(route.method + ":" + route.path)
-		}, nil)
+		}, nil, nil)
 		router.AddRoute(route.path, RequestMethod(route.method), handlerChain)
 	}
 

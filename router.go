@@ -31,7 +31,7 @@ func newProcyonRouterForBenchmark(context context.ConfigurableApplicationContext
 	registryMap := handlerRegistry.getRegistryMap()
 	for _, handlers := range registryMap {
 		for _, handler := range handlers {
-			router.handlerMapping.RegisterHandlerMethod(handler.Path, handler.Method, handler.HandlerFunc)
+			router.handlerMapping.RegisterHandlerMethod(handler.Path, handler.Method, handler.HandlerFunc, nil)
 		}
 	}
 	return router

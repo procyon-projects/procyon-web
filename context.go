@@ -164,7 +164,7 @@ func (ctx *WebRequestContext) writeResponse() {
 
 		result, err := json.Marshal(ctx.responseEntity.model)
 		if err != nil {
-			ctx.ThrowError(err)
+			panic(err)
 		}
 		ctx.fastHttpRequestContext.SetBody(result)
 	} else if ctx.responseEntity.contentType == MediaTypeApplicationTextHtml {
@@ -187,7 +187,7 @@ func (ctx *WebRequestContext) writeResponse() {
 
 		result, err := xml.Marshal(ctx.responseEntity.model)
 		if err != nil {
-			ctx.ThrowError(err)
+			panic(err)
 		}
 		ctx.fastHttpRequestContext.SetBody(result)
 	}
@@ -270,9 +270,9 @@ func (ctx *WebRequestContext) GetPath() string {
 }
 
 func (ctx *WebRequestContext) GetPathVariable(name string) (string, bool) {
-	for _, pathVariableName := range ctx.handlerChain.pathVariables {
+	for index, pathVariableName := range ctx.handlerChain.pathVariables {
 		if pathVariableName == name {
-
+			return ctx.pathVariables[index], true
 		}
 	}
 	return "", false
@@ -297,37 +297,44 @@ func (ctx *WebRequestContext) GetHeaderValue(key string) (string, bool) {
 	return string(val), true
 }
 
+func (ctx *WebRequestContext) GetRequestBody() []byte {
+	return ctx.fastHttpRequestContext.Request.Body()
+}
+
 func (ctx *WebRequestContext) BindRequest(request interface{}) {
 	typ := reflect.TypeOf(request)
 	if typ == nil {
 		panic("Type cannot be determined as the given object is nil")
 	}
+
 	if typ.Kind() == reflect.Ptr {
 		typ = typ.Elem()
 	}
 
-	var cacheType *RequestObjectCache
-	cacheRequestObjectMu.Lock()
-	if cache, ok := cacheRequestObject[typ]; ok {
-		cacheType = cache
-		cacheRequestObjectMu.Unlock()
+	var requestObjectMetadata *RequestObjectMetadata
+	if metadata, ok := requestObjectMetadataMap[typ]; ok {
+		requestObjectMetadata = metadata
 	} else {
-		cacheRequestObjectMu.Unlock()
-		return
+		panic("Your request object type was not registered. " +
+			"You need to specify your request object while registering your handler.")
 	}
 
 	body := ctx.fastHttpRequestContext.Request.Body()
-	if cacheType.hasOnlyBody {
-		contentType := core.BytesToStr(ctx.fastHttpRequestContext.Request.Header.Peek("Content-Type"))
+	if requestObjectMetadata.bodyMetadata.fieldIndex == -1 {
+		contentType, ok := ctx.GetHeaderValue("Content-Type")
+		if !ok {
+			contentType = MediaTypeApplicationJsonValue
+		}
+
 		if contentType == MediaTypeApplicationJsonValue {
 			err := json.Unmarshal(body, request)
 			if err != nil {
-				ctx.ThrowError(err)
+				panic(err)
 			}
 		} else {
 			err := xml.Unmarshal(body, request)
 			if err != nil {
-				ctx.ThrowError(err)
+				panic(err)
 			}
 		}
 		return
@@ -338,18 +345,73 @@ func (ctx *WebRequestContext) BindRequest(request interface{}) {
 		val = val.Elem()
 	}
 
-	if cacheType.bodyFieldIndex != -1 {
-		bodyValue := val.Field(cacheType.bodyFieldIndex)
-		contentType := core.BytesToStr(ctx.fastHttpRequestContext.Request.Header.Peek("Content-Type"))
+	if requestObjectMetadata.bodyMetadata.fieldIndex != -1 {
+		bodyValue := val.Field(requestObjectMetadata.bodyMetadata.fieldIndex)
+		contentType, ok := ctx.GetHeaderValue("Content-Type")
+		if !ok {
+			contentType = MediaTypeApplicationJsonValue
+		}
+
 		if contentType == MediaTypeApplicationJsonValue {
 			err := json.Unmarshal(body, bodyValue.Addr().Interface())
 			if err != nil {
-				ctx.ThrowError(err)
+				panic(err)
 			}
 		} else if contentType == MediaTypeApplicationXmlValue {
 			err := xml.Unmarshal(body, bodyValue.Addr().Interface())
 			if err != nil {
-				ctx.ThrowError(err)
+				panic(err)
+			}
+		}
+	}
+
+	if requestObjectMetadata.paramMetadata.fieldIndex != -1 {
+		paramStruct := val.Field(requestObjectMetadata.paramMetadata.fieldIndex)
+		for tagValue, fieldMetadata := range requestObjectMetadata.paramMetadata.paramMap {
+			paramField := paramStruct.Field(fieldMetadata.index)
+			paramValue, ok := ctx.GetRequestParameter(tagValue)
+			if !ok {
+				continue
+			}
+
+			if fieldMetadata.converter != nil {
+				paramField.Set(reflect.ValueOf(fieldMetadata.converter(paramValue)))
+			} else {
+				paramField.SetString(paramValue)
+			}
+		}
+	}
+
+	if requestObjectMetadata.pathMetadata.fieldIndex != -1 {
+		pathStruct := val.Field(requestObjectMetadata.pathMetadata.fieldIndex)
+		for _, fieldMetadata := range requestObjectMetadata.pathMetadata.pathVariableMap {
+			pathField := pathStruct.Field(fieldMetadata.index)
+			if fieldMetadata.extra == -1 {
+				continue
+			}
+
+			pathVariableValue := ctx.pathVariables[fieldMetadata.extra]
+			if fieldMetadata.converter != nil {
+				pathField.Set(reflect.ValueOf(fieldMetadata.converter(pathVariableValue)))
+			} else {
+				pathField.SetString(pathVariableValue)
+			}
+		}
+	}
+
+	if requestObjectMetadata.headerMetadata.fieldIndex != -1 {
+		headerStruct := val.Field(requestObjectMetadata.headerMetadata.fieldIndex)
+		for tagValue, fieldMetadata := range requestObjectMetadata.headerMetadata.headerMap {
+			headerField := headerStruct.Field(fieldMetadata.index)
+			headerValue, ok := ctx.GetHeaderValue(tagValue)
+			if !ok {
+				continue
+			}
+
+			if fieldMetadata.converter != nil {
+				headerField.Set(reflect.ValueOf(fieldMetadata.converter(headerValue)))
+			} else {
+				headerField.SetString(headerValue)
 			}
 		}
 	}

@@ -24,7 +24,7 @@ func (registry RequestMappingRegistry) Find(ctx *WebRequestContext) {
 }
 
 type HandlerMapping interface {
-	RegisterHandlerMethod(path string, method RequestMethod, handlerFunc RequestHandlerFunction)
+	RegisterHandlerMethod(path string, method RequestMethod, handlerFunc RequestHandlerFunction, metadata *RequestObjectMetadata)
 	GetHandlerChain(ctx *WebRequestContext)
 }
 
@@ -40,8 +40,9 @@ func NewRequestHandlerMapping(mappingRegistry MappingRegistry, interceptorRegist
 	}
 }
 
-func (requestMapping RequestHandlerMapping) RegisterHandlerMethod(path string, method RequestMethod, handlerFunc RequestHandlerFunction) {
-	requestMapping.mappingRegistry.Register(path, method, NewHandlerChain(handlerFunc, requestMapping.interceptorRegistry))
+func (requestMapping RequestHandlerMapping) RegisterHandlerMethod(path string, method RequestMethod, handlerFunc RequestHandlerFunction, metadata *RequestObjectMetadata) {
+	handlerChain := NewHandlerChain(handlerFunc, requestMapping.interceptorRegistry, metadata)
+	requestMapping.mappingRegistry.Register(path, method, handlerChain)
 }
 
 func (requestMapping RequestHandlerMapping) GetHandlerChain(ctx *WebRequestContext) {

@@ -10,9 +10,10 @@ type HandlerChain struct {
 	afterCompletionStartIndex int
 	handlerEndIndex           int
 	pathVariables             []string
+	requestObjectMetadata     *RequestObjectMetadata
 }
 
-func NewHandlerChain(fun RequestHandlerFunction, interceptorRegistry HandlerInterceptorRegistry) *HandlerChain {
+func NewHandlerChain(fun RequestHandlerFunction, interceptorRegistry HandlerInterceptorRegistry, metadata *RequestObjectMetadata) *HandlerChain {
 	chain := &HandlerChain{
 		fun,
 		make([]HandlerFunction, 0),
@@ -21,6 +22,7 @@ func NewHandlerChain(fun RequestHandlerFunction, interceptorRegistry HandlerInte
 		0,
 		0,
 		nil,
+		metadata,
 	}
 
 	if interceptorRegistry != nil {
@@ -54,4 +56,20 @@ func NewHandlerChain(fun RequestHandlerFunction, interceptorRegistry HandlerInte
 		chain.handlerEndIndex = len(chain.handlers) - 1
 	}
 	return chain
+}
+
+func (chain *HandlerChain) updatePathVariableMetadata(pathVariableIndex int, pathVariableName string) {
+	if chain.requestObjectMetadata == nil {
+		return
+	}
+
+	pathVariableMetadata := chain.requestObjectMetadata.pathMetadata
+
+	for variableName, metadata := range pathVariableMetadata.pathVariableMap {
+		if pathVariableName == variableName {
+			metadata.extra = pathVariableIndex
+			break
+		}
+	}
+
 }

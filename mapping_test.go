@@ -7,7 +7,7 @@ import (
 )
 
 func TestRequestMappingRegistry(t *testing.T) {
-	handlerChain := NewHandlerChain(handlerFunction, nil)
+	handlerChain := NewHandlerChain(handlerFunction, nil, nil)
 	registry := NewRequestMappingRegistry()
 	registry.Register("/test", RequestMethodGet, handlerChain)
 
@@ -28,7 +28,7 @@ func TestRequestMappingRegistry(t *testing.T) {
 
 func TestRequestHandlerMapping(t *testing.T) {
 	handlerMapping := NewRequestHandlerMapping(NewRequestMappingRegistry(), nil)
-	handlerMapping.RegisterHandlerMethod("/test", RequestMethodGet, handlerFunction)
+	handlerMapping.RegisterHandlerMethod("/test", RequestMethodGet, handlerFunction, nil)
 
 	context := newWebRequestContext().(*WebRequestContext)
 

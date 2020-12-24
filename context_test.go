@@ -175,7 +175,7 @@ func TestWebRequestContext_GetRequestForJson(t *testing.T) {
 	ctx.fastHttpRequestContext.Request = *req
 
 	requestObj := &testRequestObject{}
-	scanRequestObject(goo.GetType(requestObj))
+	ScanRequestObjectMetadata(requestObj)
 	ctx.BindRequest(requestObj)
 
 	assert.Equal(t, requestObj.Body.Name, "test")
@@ -191,7 +191,7 @@ func TestWebRequestContext_GetRequestForXml(t *testing.T) {
 	ctx.fastHttpRequestContext.Request = *req
 
 	requestObj := &testRequestObject{}
-	scanRequestObject(goo.GetType(requestObj))
+	ScanRequestObjectMetadata(goo.GetType(requestObj))
 	ctx.BindRequest(requestObj)
 
 	assert.Equal(t, requestObj.Body.Name, "test")
@@ -207,7 +207,7 @@ func TestWebRequestContext_BindRequestForJson_WithOnlyBody(t *testing.T) {
 	ctx.fastHttpRequestContext.Request = *req
 
 	requestObj := &testRequestObjectWithOnlyBody{}
-	scanRequestObject(goo.GetType(requestObj))
+	ScanRequestObjectMetadata(requestObj)
 	ctx.BindRequest(requestObj)
 
 	assert.Equal(t, requestObj.Name, "test")
@@ -223,7 +223,7 @@ func TestWebRequestContext_BindRequestForXml_WithOnlyBody(t *testing.T) {
 	ctx.fastHttpRequestContext.Request = *req
 
 	requestObj := &testRequestObjectWithOnlyBody{}
-	scanRequestObject(goo.GetType(requestObj))
+	ScanRequestObjectMetadata(goo.GetType(requestObj))
 	ctx.BindRequest(requestObj)
 
 	assert.Equal(t, requestObj.Name, "test")
