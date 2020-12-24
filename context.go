@@ -311,16 +311,17 @@ func (ctx *WebRequestContext) BindRequest(request interface{}) {
 		typ = typ.Elem()
 	}
 
-	var requestObjectMetadata *RequestObjectMetadata
-	if metadata, ok := requestObjectMetadataMap[typ]; ok {
-		requestObjectMetadata = metadata
-	} else {
-		panic("Your request object type was not registered. " +
-			"You need to specify your request object while registering your handler.")
+	metadata := ctx.handlerChain.requestObjectMetadata
+	if metadata == nil {
+		panic("You need to specify RequestObject for handler, you cannot use BindRequest function")
+	}
+
+	if metadata.typ != typ {
+		panic("Request object and type don't match.")
 	}
 
 	body := ctx.fastHttpRequestContext.Request.Body()
-	if requestObjectMetadata.bodyMetadata.fieldIndex == -1 {
+	if metadata.bodyMetadata.fieldIndex != -1 {
 		contentType, ok := ctx.GetHeaderValue("Content-Type")
 		if !ok {
 			contentType = MediaTypeApplicationJsonValue
@@ -345,8 +346,8 @@ func (ctx *WebRequestContext) BindRequest(request interface{}) {
 		val = val.Elem()
 	}
 
-	if requestObjectMetadata.bodyMetadata.fieldIndex != -1 {
-		bodyValue := val.Field(requestObjectMetadata.bodyMetadata.fieldIndex)
+	if metadata.hasOnlyBody {
+		bodyValue := val.Field(metadata.bodyMetadata.fieldIndex)
 		contentType, ok := ctx.GetHeaderValue("Content-Type")
 		if !ok {
 			contentType = MediaTypeApplicationJsonValue
@@ -365,9 +366,9 @@ func (ctx *WebRequestContext) BindRequest(request interface{}) {
 		}
 	}
 
-	if requestObjectMetadata.paramMetadata.fieldIndex != -1 {
-		paramStruct := val.Field(requestObjectMetadata.paramMetadata.fieldIndex)
-		for tagValue, fieldMetadata := range requestObjectMetadata.paramMetadata.paramMap {
+	if metadata.paramMetadata.fieldIndex != -1 {
+		paramStruct := val.Field(metadata.paramMetadata.fieldIndex)
+		for tagValue, fieldMetadata := range metadata.paramMetadata.paramMap {
 			paramField := paramStruct.Field(fieldMetadata.index)
 			paramValue, ok := ctx.GetRequestParameter(tagValue)
 			if !ok {
@@ -382,9 +383,9 @@ func (ctx *WebRequestContext) BindRequest(request interface{}) {
 		}
 	}
 
-	if requestObjectMetadata.pathMetadata.fieldIndex != -1 {
-		pathStruct := val.Field(requestObjectMetadata.pathMetadata.fieldIndex)
-		for _, fieldMetadata := range requestObjectMetadata.pathMetadata.pathVariableMap {
+	if metadata.pathMetadata.fieldIndex != -1 {
+		pathStruct := val.Field(metadata.pathMetadata.fieldIndex)
+		for _, fieldMetadata := range metadata.pathMetadata.pathVariableMap {
 			pathField := pathStruct.Field(fieldMetadata.index)
 			if fieldMetadata.extra == -1 {
 				continue
@@ -399,9 +400,9 @@ func (ctx *WebRequestContext) BindRequest(request interface{}) {
 		}
 	}
 
-	if requestObjectMetadata.headerMetadata.fieldIndex != -1 {
-		headerStruct := val.Field(requestObjectMetadata.headerMetadata.fieldIndex)
-		for tagValue, fieldMetadata := range requestObjectMetadata.headerMetadata.headerMap {
+	if metadata.headerMetadata.fieldIndex != -1 {
+		headerStruct := val.Field(metadata.headerMetadata.fieldIndex)
+		for tagValue, fieldMetadata := range metadata.headerMetadata.headerMap {
 			headerField := headerStruct.Field(fieldMetadata.index)
 			headerValue, ok := ctx.GetHeaderValue(tagValue)
 			if !ok {

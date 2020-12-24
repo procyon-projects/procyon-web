@@ -11,10 +11,12 @@ type valueConverterFunction func(val string) interface{}
 var requestObjectMetadataMap = make(map[reflect.Type]*RequestObjectMetadata, 0)
 
 type RequestObjectMetadata struct {
-	bodyMetadata   requestBodyMetadata
-	paramMetadata  requestParamMetadata
-	pathMetadata   requestPathMetadata
-	headerMetadata requestHeaderMetadata
+	typ            reflect.Type
+	hasOnlyBody    bool
+	bodyMetadata   *requestBodyMetadata
+	paramMetadata  *requestParamMetadata
+	pathMetadata   *requestPathMetadata
+	headerMetadata *requestHeaderMetadata
 }
 
 func newRequestObjectMetadata() *RequestObjectMetadata {
@@ -38,45 +40,45 @@ type requestBodyMetadata struct {
 	fieldIndex int
 }
 
-func newRequestBodyMetadata() requestBodyMetadata {
-	return requestBodyMetadata{
+func newRequestBodyMetadata() *requestBodyMetadata {
+	return &requestBodyMetadata{
 		fieldIndex: -1,
 	}
 }
 
 type requestParamMetadata struct {
 	fieldIndex int
-	paramMap   map[string]fieldMetadata
+	paramMap   map[string]*fieldMetadata
 }
 
-func newRequestParamMetadata() requestParamMetadata {
-	return requestParamMetadata{
+func newRequestParamMetadata() *requestParamMetadata {
+	return &requestParamMetadata{
 		fieldIndex: -1,
-		paramMap:   make(map[string]fieldMetadata, 0),
+		paramMap:   make(map[string]*fieldMetadata, 0),
 	}
 }
 
 type requestPathMetadata struct {
 	fieldIndex      int
-	pathVariableMap map[string]fieldMetadata
+	pathVariableMap map[string]*fieldMetadata
 }
 
-func newRequestPathMetadata() requestPathMetadata {
-	return requestPathMetadata{
+func newRequestPathMetadata() *requestPathMetadata {
+	return &requestPathMetadata{
 		fieldIndex:      -1,
-		pathVariableMap: make(map[string]fieldMetadata, 0),
+		pathVariableMap: make(map[string]*fieldMetadata, 0),
 	}
 }
 
 type requestHeaderMetadata struct {
 	fieldIndex int
-	headerMap  map[string]fieldMetadata
+	headerMap  map[string]*fieldMetadata
 }
 
-func newRequestHeaderMetadata() requestHeaderMetadata {
-	return requestHeaderMetadata{
+func newRequestHeaderMetadata() *requestHeaderMetadata {
+	return &requestHeaderMetadata{
 		fieldIndex: -1,
-		headerMap:  make(map[string]fieldMetadata, 0),
+		headerMap:  make(map[string]*fieldMetadata, 0),
 	}
 }
 
@@ -137,12 +139,17 @@ func ScanRequestObjectMetadata(requestObject interface{}) *RequestObjectMetadata
 
 	}
 
+	if hasFields {
+		requestObjectMetadata.hasOnlyBody = true
+	}
+
+	requestObjectMetadata.typ = structType.GetGoType()
 	requestObjectMetadataMap[structType.GetGoType()] = requestObjectMetadata
 
 	return requestObjectMetadata
 }
 
-func traverseFields(requestStruct goo.Struct, fieldMap map[string]fieldMetadata) int {
+func traverseFields(requestStruct goo.Struct, fieldMap map[string]*fieldMetadata) int {
 	if requestStruct == nil || fieldMap == nil {
 		return 0
 	}
@@ -168,7 +175,7 @@ func traverseFields(requestStruct goo.Struct, fieldMap map[string]fieldMetadata)
 			if jsonTag.Value == "" {
 				panic("wtf : tag value cannot be empty, " + field.GetName())
 			}
-			fieldMap[jsonTag.Value] = *fieldMetadata
+			fieldMap[jsonTag.Value] = fieldMetadata
 		} else {
 			yamlTag, err := field.GetTagByName("yaml")
 			if err != nil {
@@ -178,7 +185,7 @@ func traverseFields(requestStruct goo.Struct, fieldMap map[string]fieldMetadata)
 			if yamlTag.Value == "" {
 				panic("wtf : tag value cannot be empty, " + field.GetName())
 			}
-			fieldMap[yamlTag.Value] = *fieldMetadata
+			fieldMap[yamlTag.Value] = fieldMetadata
 		}
 
 	}
