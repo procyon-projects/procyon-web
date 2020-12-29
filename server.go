@@ -12,10 +12,10 @@ type Server interface {
 	Run() error
 	Stop() error
 	SetProperties(properties *configure.WebServerProperties)
-	GetPort() int
+	GetPort() uint
 }
 
-const DefaultWebServerPort = 8080
+const DefaultWebServerPort uint = 8080
 
 type ProcyonWebServer struct {
 	router     Router
@@ -27,7 +27,7 @@ func (server *ProcyonWebServer) SetProperties(properties *configure.WebServerPro
 }
 
 func (server *ProcyonWebServer) Run() error {
-	return fasthttp.ListenAndServe(":"+strconv.Itoa(server.GetPort()), server.Handle)
+	return fasthttp.ListenAndServe(":"+strconv.Itoa(int(server.GetPort())), server.Handle)
 }
 
 func (server *ProcyonWebServer) Handle(ctx *fasthttp.RequestCtx) {
@@ -38,8 +38,8 @@ func (server *ProcyonWebServer) Stop() error {
 	return nil
 }
 
-func (server *ProcyonWebServer) GetPort() int {
-	var port int
+func (server *ProcyonWebServer) GetPort() uint {
+	var port uint
 	if server.properties == nil {
 		port = DefaultWebServerPort
 	} else {
