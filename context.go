@@ -78,7 +78,7 @@ func (ctx *ProcyonServerApplicationContext) FinishConfigure() {
 	go func() {
 		serverProperties := ctx.GetSharedPeaType(goo.GetType((*configure.WebServerProperties)(nil)))
 		ctx.server.SetProperties(serverProperties.(*configure.WebServerProperties))
-		logger.Info(ctx, "Procyon started on port(s): "+strconv.Itoa(ctx.GetWebServer().GetPort()))
+		logger.Info(ctx, "Procyon started on port(s): "+strconv.Itoa(int(ctx.GetWebServer().GetPort())))
 		startedChannel <- true
 		ctx.server.Run()
 	}()
