@@ -11,12 +11,12 @@ import (
 func TestProcyonWebServer(t *testing.T) {
 	webServer := &ProcyonWebServer{}
 
-	assert.Equal(t, 8080, webServer.GetPort())
+	assert.Equal(t, uint(8080), webServer.GetPort())
 	properties := &configure.WebServerProperties{
 		Port: 3000,
 	}
 	webServer.SetProperties(properties)
-	assert.Equal(t, 3000, webServer.GetPort())
+	assert.Equal(t, uint(3000), webServer.GetPort())
 
 	go func() {
 		webServer.Run()
