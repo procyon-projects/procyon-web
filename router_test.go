@@ -298,7 +298,7 @@ func TestRouter(t *testing.T) {
 		router.AddRoute(route.path, RequestMethod(route.method), handlerChain)
 	}
 
-	webRequestContext := newWebRequestContext().(*WebRequestContext)
+	webRequestContext := &WebRequestContext{}
 	fastHttpRequestContext := &fasthttp.RequestCtx{}
 
 	for index, route := range githubAPI {

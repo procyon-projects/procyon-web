@@ -97,6 +97,7 @@ type PathVariable struct {
 }
 
 type WebRequestContext struct {
+	router *ProcyonRouter
 	// context
 	contextIdBuffer        [36]byte
 	contextIdStr           string
@@ -120,13 +121,6 @@ type WebRequestContext struct {
 	canceled  bool
 	completed bool
 	crashed   bool
-}
-
-func newWebRequestContext() interface{} {
-	return &WebRequestContext{
-		handlerIndex: 0,
-		valueMap:     make(map[string]interface{}),
-	}
 }
 
 func (ctx *WebRequestContext) prepare(generateContextId bool) {
@@ -199,16 +193,16 @@ func (ctx *WebRequestContext) writeResponse() {
 	}
 }
 
-func (ctx *WebRequestContext) invoke(recoveryActive bool, errorHandlerManager *errorHandlerManager) {
-	if recoveryActive {
-		defer errorHandlerManager.Recover(ctx)
-		ctx.invokeHandlers(errorHandlerManager)
+func (ctx *WebRequestContext) invoke() {
+	if ctx.router.recoveryActive {
+		defer ctx.router.errorHandlerManager.Recover(ctx)
+		ctx.invokeHandlers()
 	} else {
-		ctx.invokeHandlers(errorHandlerManager)
+		ctx.invokeHandlers()
 	}
 }
 
-func (ctx *WebRequestContext) invokeHandlers(errorHandlerManager *errorHandlerManager) {
+func (ctx *WebRequestContext) invokeHandlers() {
 next:
 	if ctx.handlerIndex > ctx.handlerChain.handlerEndIndex {
 		return
@@ -221,15 +215,9 @@ next:
 
 	ctx.handlerIndex++
 	if ctx.handlerIndex == ctx.handlerChain.afterCompletionStartIndex {
-
 		if ctx.internalError == nil && ctx.httpError != nil {
-			if errorHandlerManager.customErrorHandler != nil {
-				errorHandlerManager.customErrorHandler.HandleError(ctx.httpError, ctx)
-			} else {
-				errorHandlerManager.defaultErrorHandler.HandleError(ctx.httpError, ctx)
-			}
+			ctx.router.errorHandlerManager.JustHandleError(ctx.httpError, ctx)
 		}
-
 		ctx.writeResponse()
 		ctx.completed = true
 	}
@@ -305,6 +293,10 @@ func (ctx *WebRequestContext) GetRequestHeader(key string) (string, bool) {
 
 func (ctx *WebRequestContext) GetRequestBody() []byte {
 	return ctx.fastHttpRequestContext.Request.Body()
+}
+
+func (ctx *WebRequestContext) Validate(val interface{}) error {
+	return ctx.router.validator.Validate(val)
 }
 
 func (ctx *WebRequestContext) BindRequest(request interface{}) error {

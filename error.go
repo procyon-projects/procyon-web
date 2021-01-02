@@ -106,6 +106,14 @@ func (errorHandlerManager *errorHandlerManager) Recover(ctx *WebRequestContext) 
 	}
 }
 
+func (errorHandlerManager *errorHandlerManager) JustHandleError(err error, ctx *WebRequestContext) {
+	if errorHandlerManager.customErrorHandler != nil {
+		errorHandlerManager.customErrorHandler.HandleError(err, ctx)
+	} else {
+		errorHandlerManager.defaultErrorHandler.HandleError(err, ctx)
+	}
+}
+
 func (errorHandlerManager *errorHandlerManager) HandleError(err error, ctx *WebRequestContext) {
 	defer errorHandlerManager.wtf(err, ctx)
 
@@ -118,7 +126,7 @@ func (errorHandlerManager *errorHandlerManager) HandleError(err error, ctx *WebR
 
 	if ctx.handlerChain != nil && ctx.handlerIndex < ctx.handlerChain.handlerIndex {
 		ctx.handlerIndex = ctx.handlerChain.afterCompletionStartIndex
-		ctx.invokeHandlers(nil)
+		ctx.invokeHandlers()
 	}
 }
 

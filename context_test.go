@@ -9,7 +9,7 @@ import (
 )
 
 func TestWebRequestContext_prepare(t *testing.T) {
-	ctx := newWebRequestContext().(*WebRequestContext)
+	ctx := WebRequestContext{}
 
 	ctx.prepare(false)
 	assert.Equal(t, 0, len(ctx.contextIdStr))
@@ -19,7 +19,7 @@ func TestWebRequestContext_prepare(t *testing.T) {
 }
 
 func TestWebRequestContext_reset(t *testing.T) {
-	ctx := newWebRequestContext().(*WebRequestContext)
+	ctx := WebRequestContext{}
 
 	ctx.handlerIndex = 1
 	ctx.pathVariableCount = 1
@@ -39,61 +39,63 @@ func TestWebRequestContext_reset(t *testing.T) {
 }
 
 func TestWebRequestContext_ValueMap(t *testing.T) {
-	ctx := newWebRequestContext().(*WebRequestContext)
+	ctx := WebRequestContext{
+		valueMap: make(map[string]interface{}, 0),
+	}
 	ctx.Put("test-key", "test-value")
 	assert.Equal(t, "test-value", ctx.Get("test-key"))
 }
 
 func TestWebRequestContext_Status(t *testing.T) {
-	ctx := newWebRequestContext().(*WebRequestContext)
+	ctx := WebRequestContext{}
 	ctx.SetResponseStatus(http.StatusNotFound)
 	assert.Equal(t, http.StatusNotFound, ctx.GetResponseStatus())
 }
 
 func TestWebRequestContext_Body(t *testing.T) {
-	ctx := newWebRequestContext().(*WebRequestContext)
+	ctx := WebRequestContext{}
 	ctx.SetModel("test-body")
 	assert.Equal(t, "test-body", ctx.GetModel())
 }
 
 func TestWebRequestContext_ContextType(t *testing.T) {
-	ctx := newWebRequestContext().(*WebRequestContext)
+	ctx := WebRequestContext{}
 	ctx.SetResponseContentType(MediaTypeApplicationJson)
 	assert.Equal(t, MediaTypeApplicationJson, ctx.GetResponseContentType())
 }
 
 func TestWebRequestContext_Ok(t *testing.T) {
-	ctx := newWebRequestContext().(*WebRequestContext)
+	ctx := WebRequestContext{}
 	ctx.Ok()
 	assert.Equal(t, http.StatusOK, ctx.responseEntity.status)
 }
 
 func TestWebRequestContext_NotFound(t *testing.T) {
-	ctx := newWebRequestContext().(*WebRequestContext)
+	ctx := WebRequestContext{}
 	ctx.NotFound()
 	assert.Equal(t, http.StatusNotFound, ctx.responseEntity.status)
 }
 
 func TestWebRequestContext_NoContent(t *testing.T) {
-	ctx := newWebRequestContext().(*WebRequestContext)
+	ctx := WebRequestContext{}
 	ctx.NoContent()
 	assert.Equal(t, http.StatusNoContent, ctx.responseEntity.status)
 }
 
 func TestWebRequestContext_BadRequest(t *testing.T) {
-	ctx := newWebRequestContext().(*WebRequestContext)
+	ctx := WebRequestContext{}
 	ctx.BadRequest()
 	assert.Equal(t, http.StatusBadRequest, ctx.responseEntity.status)
 }
 
 func TestWebRequestContext_Accepted(t *testing.T) {
-	ctx := newWebRequestContext().(*WebRequestContext)
+	ctx := WebRequestContext{}
 	ctx.Accepted()
 	assert.Equal(t, http.StatusAccepted, ctx.responseEntity.status)
 }
 
 func TestWebRequestContext_Created(t *testing.T) {
-	ctx := newWebRequestContext().(*WebRequestContext)
+	ctx := WebRequestContext{}
 	ctx.Created("")
 	assert.Equal(t, http.StatusCreated, ctx.responseEntity.status)
 }
@@ -105,7 +107,7 @@ func TestWebRequestContext_Error(t *testing.T) {
 }
 
 func TestWebRequestContext_ThrowError(t *testing.T) {
-	ctx := newWebRequestContext().(*WebRequestContext)
+	ctx := WebRequestContext{}
 	assert.Panics(t, func() {
 		ctx.ThrowError(errors.New("test-error"))
 	})
@@ -117,7 +119,7 @@ type testResponse struct {
 }
 
 func TestWebRequestContext_writeResponseAsTextHtml(t *testing.T) {
-	ctx := newWebRequestContext().(*WebRequestContext)
+	ctx := WebRequestContext{}
 	ctx.fastHttpRequestContext = &fasthttp.RequestCtx{}
 	ctx.SetResponseContentType(MediaTypeApplicationTextHtml)
 	ctx.SetModel("test")
@@ -127,7 +129,7 @@ func TestWebRequestContext_writeResponseAsTextHtml(t *testing.T) {
 }
 
 func TestWebRequestContext_writeResponseAsJson(t *testing.T) {
-	ctx := newWebRequestContext().(*WebRequestContext)
+	ctx := WebRequestContext{}
 	ctx.fastHttpRequestContext = &fasthttp.RequestCtx{}
 	ctx.SetResponseContentType(MediaTypeApplicationJson)
 	ctx.SetModel(testResponse{"test", 25})
@@ -137,7 +139,7 @@ func TestWebRequestContext_writeResponseAsJson(t *testing.T) {
 }
 
 func TestWebRequestContext_writeResponseAsXml(t *testing.T) {
-	ctx := newWebRequestContext().(*WebRequestContext)
+	ctx := WebRequestContext{}
 	ctx.fastHttpRequestContext = &fasthttp.RequestCtx{}
 	ctx.SetResponseContentType(MediaTypeApplicationXml)
 	ctx.SetModel(testResponse{"test", 25})
@@ -147,7 +149,7 @@ func TestWebRequestContext_writeResponseAsXml(t *testing.T) {
 }
 
 func TestWebRequestContext_GetRequestWithNil(t *testing.T) {
-	ctx := newWebRequestContext().(*WebRequestContext)
+	ctx := WebRequestContext{}
 	err := ctx.BindRequest(nil)
 	assert.NotNil(t, err)
 }
@@ -165,7 +167,7 @@ type testRequestObjectWithOnlyBody struct {
 }
 
 func TestWebRequestContext_GetRequestForJson(t *testing.T) {
-	ctx := newWebRequestContext().(*WebRequestContext)
+	ctx := WebRequestContext{}
 	ctx.fastHttpRequestContext = &fasthttp.RequestCtx{}
 	req := fasthttp.AcquireRequest()
 	req.SetBody([]byte("{\"Name\":\"test\",\"Age\":25}"))
@@ -181,7 +183,7 @@ func TestWebRequestContext_GetRequestForJson(t *testing.T) {
 }
 
 func TestWebRequestContext_GetRequestForXml(t *testing.T) {
-	ctx := newWebRequestContext().(*WebRequestContext)
+	ctx := WebRequestContext{}
 	ctx.fastHttpRequestContext = &fasthttp.RequestCtx{}
 	req := fasthttp.AcquireRequest()
 	req.SetBody([]byte("<testRequestObject><Name>test</Name><Age>25</Age></testRequestObject>"))
@@ -197,7 +199,7 @@ func TestWebRequestContext_GetRequestForXml(t *testing.T) {
 }
 
 func TestWebRequestContext_BindRequestForJson_WithOnlyBody(t *testing.T) {
-	ctx := newWebRequestContext().(*WebRequestContext)
+	ctx := WebRequestContext{}
 	ctx.fastHttpRequestContext = &fasthttp.RequestCtx{}
 	req := fasthttp.AcquireRequest()
 	req.SetBody([]byte("{\"Name\":\"test\",\"Age\":25}"))
@@ -213,7 +215,7 @@ func TestWebRequestContext_BindRequestForJson_WithOnlyBody(t *testing.T) {
 }
 
 func TestWebRequestContext_BindRequestForXml_WithOnlyBody(t *testing.T) {
-	ctx := newWebRequestContext().(*WebRequestContext)
+	ctx := WebRequestContext{}
 	ctx.fastHttpRequestContext = &fasthttp.RequestCtx{}
 	req := fasthttp.AcquireRequest()
 	req.SetBody([]byte("<testRequestObjectWithOnlyBody><Name>test</Name><Age>25</Age></testRequestObjectWithOnlyBody>"))

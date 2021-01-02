@@ -18,15 +18,17 @@ type ProcyonRouter struct {
 	generateContextId   bool
 	recoveryActive      bool
 	errorHandlerManager *errorHandlerManager
+	validator           Validator
 }
 
 func newProcyonRouterForBenchmark(context context.ConfigurableApplicationContext, handlerRegistry SimpleHandlerRegistry) *ProcyonRouter {
 	router := &ProcyonRouter{
 		ctx: context,
-		requestContextPool: &sync.Pool{
-			New: newWebRequestContext,
-		},
 	}
+	router.requestContextPool = &sync.Pool{
+		New: router.newWebRequestContext,
+	}
+
 	router.handlerMapping = NewRequestHandlerMapping(NewRequestMappingRegistry(), nil)
 	registryMap := handlerRegistry.getRegistryMap()
 	for _, handlers := range registryMap {
@@ -39,15 +41,24 @@ func newProcyonRouterForBenchmark(context context.ConfigurableApplicationContext
 
 func NewProcyonRouter(context context.ConfigurableApplicationContext) *ProcyonRouter {
 	router := &ProcyonRouter{
-		ctx: context,
-		requestContextPool: &sync.Pool{
-			New: newWebRequestContext,
-		},
+		ctx:               context,
 		generateContextId: true,
 		recoveryActive:    true,
+		validator:         newDefaultValidator(),
+	}
+	router.requestContextPool = &sync.Pool{
+		New: router.newWebRequestContext,
 	}
 	router.configure()
 	return router
+}
+
+func (router *ProcyonRouter) newWebRequestContext() interface{} {
+	return &WebRequestContext{
+		router:       router,
+		handlerIndex: 0,
+		valueMap:     make(map[string]interface{}),
+	}
 }
 
 func (router *ProcyonRouter) configure() {
@@ -60,6 +71,11 @@ func (router *ProcyonRouter) configure() {
 	errorHandler, _ := peaFactory.GetPeaByType(goo.GetType((*ErrorHandler)(nil)))
 	if errorHandler != nil {
 		router.errorHandlerManager.customErrorHandler = errorHandler.(ErrorHandler)
+	}
+
+	customValidator, _ := peaFactory.GetPeaByType(goo.GetType((*Validator)(nil)))
+	if customValidator != nil {
+		router.validator = customValidator.(Validator)
 	}
 }
 
@@ -81,7 +97,7 @@ func (router *ProcyonRouter) Route(requestCtx *fasthttp.RequestCtx) {
 		return
 	}
 
-	requestContext.invoke(router.recoveryActive, router.errorHandlerManager)
+	requestContext.invoke()
 
 	requestContext.reset()
 	router.requestContextPool.Put(requestContext)

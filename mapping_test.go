@@ -11,7 +11,7 @@ func TestRequestMappingRegistry(t *testing.T) {
 	registry := NewRequestMappingRegistry()
 	registry.Register("/test", RequestMethodGet, handlerChain)
 
-	context := newWebRequestContext().(*WebRequestContext)
+	context := &WebRequestContext{}
 
 	req := fasthttp.AcquireRequest()
 	req.SetRequestURI("/test")
@@ -30,7 +30,7 @@ func TestRequestHandlerMapping(t *testing.T) {
 	handlerMapping := NewRequestHandlerMapping(NewRequestMappingRegistry(), nil)
 	handlerMapping.RegisterHandlerMethod("/test", RequestMethodGet, handlerFunction, nil)
 
-	context := newWebRequestContext().(*WebRequestContext)
+	context := &WebRequestContext{}
 
 	req := fasthttp.AcquireRequest()
 	req.SetRequestURI("/test")
