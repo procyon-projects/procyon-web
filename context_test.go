@@ -149,7 +149,11 @@ func TestWebRequestContext_writeResponseAsXml(t *testing.T) {
 }
 
 func TestWebRequestContext_GetRequestWithNil(t *testing.T) {
-	ctx := WebRequestContext{}
+	ctx := WebRequestContext{
+		router: &ProcyonRouter{
+			requestBinder: newDefaultRequestBinder(),
+		},
+	}
 	err := ctx.BindRequest(nil)
 	assert.NotNil(t, err)
 }
@@ -167,7 +171,11 @@ type testRequestObjectWithOnlyBody struct {
 }
 
 func TestWebRequestContext_GetRequestForJson(t *testing.T) {
-	ctx := WebRequestContext{}
+	ctx := WebRequestContext{
+		router: &ProcyonRouter{
+			requestBinder: newDefaultRequestBinder(),
+		},
+	}
 	ctx.fastHttpRequestContext = &fasthttp.RequestCtx{}
 	req := fasthttp.AcquireRequest()
 	req.SetBody([]byte("{\"Name\":\"test\",\"Age\":25}"))
@@ -183,7 +191,11 @@ func TestWebRequestContext_GetRequestForJson(t *testing.T) {
 }
 
 func TestWebRequestContext_GetRequestForXml(t *testing.T) {
-	ctx := WebRequestContext{}
+	ctx := WebRequestContext{
+		router: &ProcyonRouter{
+			requestBinder: newDefaultRequestBinder(),
+		},
+	}
 	ctx.fastHttpRequestContext = &fasthttp.RequestCtx{}
 	req := fasthttp.AcquireRequest()
 	req.SetBody([]byte("<testRequestObject><Name>test</Name><Age>25</Age></testRequestObject>"))
@@ -199,7 +211,11 @@ func TestWebRequestContext_GetRequestForXml(t *testing.T) {
 }
 
 func TestWebRequestContext_BindRequestForJson_WithOnlyBody(t *testing.T) {
-	ctx := WebRequestContext{}
+	ctx := WebRequestContext{
+		router: &ProcyonRouter{
+			requestBinder: newDefaultRequestBinder(),
+		},
+	}
 	ctx.fastHttpRequestContext = &fasthttp.RequestCtx{}
 	req := fasthttp.AcquireRequest()
 	req.SetBody([]byte("{\"Name\":\"test\",\"Age\":25}"))
@@ -215,7 +231,11 @@ func TestWebRequestContext_BindRequestForJson_WithOnlyBody(t *testing.T) {
 }
 
 func TestWebRequestContext_BindRequestForXml_WithOnlyBody(t *testing.T) {
-	ctx := WebRequestContext{}
+	ctx := WebRequestContext{
+		router: &ProcyonRouter{
+			requestBinder: newDefaultRequestBinder(),
+		},
+	}
 	ctx.fastHttpRequestContext = &fasthttp.RequestCtx{}
 	req := fasthttp.AcquireRequest()
 	req.SetBody([]byte("<testRequestObjectWithOnlyBody><Name>test</Name><Age>25</Age></testRequestObjectWithOnlyBody>"))
