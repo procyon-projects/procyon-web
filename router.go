@@ -20,6 +20,7 @@ type ProcyonRouter struct {
 	errorHandlerManager *errorHandlerManager
 	validator           Validator
 	requestBinder       RequestBinder
+	responseBodyWriter  ResponseBodyWriter
 }
 
 func newProcyonRouterForBenchmark(context context.ConfigurableApplicationContext, handlerRegistry SimpleHandlerRegistry) *ProcyonRouter {
@@ -42,11 +43,12 @@ func newProcyonRouterForBenchmark(context context.ConfigurableApplicationContext
 
 func NewProcyonRouter(context context.ConfigurableApplicationContext) *ProcyonRouter {
 	router := &ProcyonRouter{
-		ctx:               context,
-		generateContextId: true,
-		recoveryActive:    true,
-		validator:         newDefaultValidator(),
-		requestBinder:     newDefaultRequestBinder(),
+		ctx:                context,
+		generateContextId:  true,
+		recoveryActive:     true,
+		validator:          newDefaultValidator(),
+		requestBinder:      newDefaultRequestBinder(),
+		responseBodyWriter: newDefaultResponseBodyWriter(),
 	}
 	router.requestContextPool = &sync.Pool{
 		New: router.newWebRequestContext,
@@ -56,11 +58,12 @@ func NewProcyonRouter(context context.ConfigurableApplicationContext) *ProcyonRo
 }
 
 func (router *ProcyonRouter) newWebRequestContext() interface{} {
-	return &WebRequestContext{
+	requestContext := &WebRequestContext{
 		router:       router,
 		handlerIndex: 0,
 		valueMap:     make(map[string]interface{}),
 	}
+	return requestContext
 }
 
 func (router *ProcyonRouter) configure() {
@@ -69,20 +72,29 @@ func (router *ProcyonRouter) configure() {
 	handlerAdapter := peaFactory.GetSharedPeaType(goo.GetType((*HandlerMapping)(nil)))
 	router.handlerMapping = handlerAdapter.(HandlerMapping)
 
+	// custom logger
 	router.errorHandlerManager = newErrorHandlerManager(router.ctx.GetLogger())
 	errorHandler, _ := peaFactory.GetPeaByType(goo.GetType((*ErrorHandler)(nil)))
 	if errorHandler != nil {
 		router.errorHandlerManager.customErrorHandler = errorHandler.(ErrorHandler)
 	}
 
+	// custom validator
 	customValidator, _ := peaFactory.GetPeaByType(goo.GetType((*Validator)(nil)))
 	if customValidator != nil {
 		router.validator = customValidator.(Validator)
 	}
 
+	// custom request binder
 	customRequestBinder, _ := peaFactory.GetPeaByType(goo.GetType((*RequestBinder)(nil)))
 	if customRequestBinder != nil {
 		router.requestBinder = customRequestBinder.(RequestBinder)
+	}
+
+	// custom response body writer
+	customResponseBodyWriter, _ := peaFactory.GetPeaByType(goo.GetType((*ResponseBodyWriter)(nil)))
+	if customResponseBodyWriter != nil {
+		router.responseBodyWriter = customResponseBodyWriter.(ResponseBodyWriter)
 	}
 }
 

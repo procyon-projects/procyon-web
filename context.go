@@ -1,8 +1,6 @@
 package web
 
 import (
-	"encoding/xml"
-	json "github.com/json-iterator/go"
 	"github.com/procyon-projects/goo"
 	configure "github.com/procyon-projects/procyon-configure"
 	"github.com/procyon-projects/procyon-context"
@@ -111,6 +109,7 @@ type WebRequestContext struct {
 	pathVariables     [20]string
 	pathVariableCount int
 	// response and error
+	responseWriter ResponseWriter
 	responseEntity ResponseEntity
 	httpError      *HTTPError
 	internalError  error
@@ -144,50 +143,28 @@ func (ctx *WebRequestContext) reset() {
 	ctx.responseEntity.status = http.StatusOK
 	ctx.responseEntity.model = nil
 	ctx.responseEntity.contentType = DefaultMediaType
+	ctx.responseEntity.location = ""
 }
 
 func (ctx *WebRequestContext) writeResponse() {
+	err := ctx.router.responseBodyWriter.WriteResponseBody(ctx, ctx.responseWriter)
+	if err != nil {
+		panic(err)
+	}
+
 	ctx.fastHttpRequestContext.SetStatusCode(ctx.responseEntity.status)
 
 	if ctx.responseEntity.status == http.StatusCreated && ctx.responseEntity.location != "" {
 		ctx.fastHttpRequestContext.Response.Header.Add(fasthttp.HeaderLocation, ctx.responseEntity.location)
 	}
 
-	if ctx.responseEntity.contentType == MediaTypeApplicationJson {
+	switch ctx.responseEntity.contentType {
+	case MediaTypeApplicationJson:
 		ctx.fastHttpRequestContext.SetContentType(MediaTypeApplicationJsonValue)
-
-		if ctx.responseEntity.model == nil {
-			return
-		}
-
-		result, err := json.Marshal(ctx.responseEntity.model)
-		if err != nil {
-			panic(err)
-		}
-		ctx.fastHttpRequestContext.SetBody(result)
-	} else if ctx.responseEntity.contentType == MediaTypeApplicationTextHtml {
+	case MediaTypeApplicationTextHtml:
 		ctx.fastHttpRequestContext.SetContentType(MediaTypeApplicationTextHtmlValue)
-		if ctx.responseEntity.model == nil {
-			return
-		}
-
-		switch ctx.responseEntity.model.(type) {
-		case string:
-			value := []byte(ctx.responseEntity.model.(string))
-			ctx.fastHttpRequestContext.SetBody(value)
-		}
-	} else {
+	default:
 		ctx.fastHttpRequestContext.SetContentType(MediaTypeApplicationXmlValue)
-
-		if ctx.responseEntity.model == nil {
-			return
-		}
-
-		result, err := xml.Marshal(ctx.responseEntity.model)
-		if err != nil {
-			panic(err)
-		}
-		ctx.fastHttpRequestContext.SetBody(result)
 	}
 }
 
@@ -327,6 +304,10 @@ func (ctx *WebRequestContext) SetResponseContentType(mediaType MediaType) Respon
 func (ctx *WebRequestContext) AddResponseHeader(key string, value string) ResponseHeaderBuilder {
 	ctx.fastHttpRequestContext.Response.Header.Add(key, value)
 	return ctx
+}
+
+func (ctx *WebRequestContext) GetResponseLocation() string {
+	return ctx.responseEntity.location
 }
 
 func (ctx *WebRequestContext) GetResponseStatus() int {

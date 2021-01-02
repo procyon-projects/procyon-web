@@ -119,7 +119,11 @@ type testResponse struct {
 }
 
 func TestWebRequestContext_writeResponseAsTextHtml(t *testing.T) {
-	ctx := WebRequestContext{}
+	ctx := &WebRequestContext{
+		router: &ProcyonRouter{
+			responseBodyWriter: newDefaultResponseBodyWriter(),
+		},
+	}
 	ctx.fastHttpRequestContext = &fasthttp.RequestCtx{}
 	ctx.SetResponseContentType(MediaTypeApplicationTextHtml)
 	ctx.SetModel("test")
@@ -129,7 +133,11 @@ func TestWebRequestContext_writeResponseAsTextHtml(t *testing.T) {
 }
 
 func TestWebRequestContext_writeResponseAsJson(t *testing.T) {
-	ctx := WebRequestContext{}
+	ctx := WebRequestContext{
+		router: &ProcyonRouter{
+			responseBodyWriter: newDefaultResponseBodyWriter(),
+		},
+	}
 	ctx.fastHttpRequestContext = &fasthttp.RequestCtx{}
 	ctx.SetResponseContentType(MediaTypeApplicationJson)
 	ctx.SetModel(testResponse{"test", 25})
@@ -139,7 +147,11 @@ func TestWebRequestContext_writeResponseAsJson(t *testing.T) {
 }
 
 func TestWebRequestContext_writeResponseAsXml(t *testing.T) {
-	ctx := WebRequestContext{}
+	ctx := WebRequestContext{
+		router: &ProcyonRouter{
+			responseBodyWriter: newDefaultResponseBodyWriter(),
+		},
+	}
 	ctx.fastHttpRequestContext = &fasthttp.RequestCtx{}
 	ctx.SetResponseContentType(MediaTypeApplicationXml)
 	ctx.SetModel(testResponse{"test", 25})
