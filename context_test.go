@@ -148,9 +148,8 @@ func TestWebRequestContext_writeResponseAsXml(t *testing.T) {
 
 func TestWebRequestContext_GetRequestWithNil(t *testing.T) {
 	ctx := newWebRequestContext().(*WebRequestContext)
-	assert.Panics(t, func() {
-		ctx.BindRequest(nil)
-	})
+	err := ctx.BindRequest(nil)
+	assert.NotNil(t, err)
 }
 
 type testRequestObject struct {

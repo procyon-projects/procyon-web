@@ -17,7 +17,7 @@ const (
 )
 
 type ResponseHeaderBuilder interface {
-	AddHeader(key string, value string) ResponseHeaderBuilder
+	AddResponseHeader(key string, value string) ResponseHeaderBuilder
 }
 
 type ResponseBodyBuilder interface {
@@ -32,10 +32,12 @@ type Response interface {
 	GetModel() interface{}
 	GetResponseBody() []byte
 	GetResponseContentType() MediaType
+	GetResponseHeader(key string) (string, bool)
 }
 
 type ResponseEntity struct {
 	model       interface{}
+	location    string
 	status      int
 	contentType MediaType
 }

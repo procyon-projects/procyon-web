@@ -2,6 +2,7 @@ package web
 
 import (
 	"encoding/xml"
+	"errors"
 	json "github.com/json-iterator/go"
 	"github.com/procyon-projects/goo"
 	configure "github.com/procyon-projects/procyon-configure"
@@ -155,6 +156,11 @@ func (ctx *WebRequestContext) reset() {
 
 func (ctx *WebRequestContext) writeResponse() {
 	ctx.fastHttpRequestContext.SetStatusCode(ctx.responseEntity.status)
+
+	if ctx.responseEntity.status == http.StatusCreated && ctx.responseEntity.location != "" {
+		ctx.fastHttpRequestContext.Response.Header.Add(fasthttp.HeaderLocation, ctx.responseEntity.location)
+	}
+
 	if ctx.responseEntity.contentType == MediaTypeApplicationJson {
 		ctx.fastHttpRequestContext.SetContentType(MediaTypeApplicationJsonValue)
 
@@ -289,7 +295,7 @@ func (ctx *WebRequestContext) GetRequestParameter(name string) (string, bool) {
 	return string(result), true
 }
 
-func (ctx *WebRequestContext) GetHeaderValue(key string) (string, bool) {
+func (ctx *WebRequestContext) GetRequestHeader(key string) (string, bool) {
 	val := ctx.fastHttpRequestContext.Request.Header.Peek(key)
 	if val == nil {
 		return "", false
@@ -301,10 +307,10 @@ func (ctx *WebRequestContext) GetRequestBody() []byte {
 	return ctx.fastHttpRequestContext.Request.Body()
 }
 
-func (ctx *WebRequestContext) BindRequest(request interface{}) {
+func (ctx *WebRequestContext) BindRequest(request interface{}) error {
 	typ := reflect.TypeOf(request)
 	if typ == nil {
-		panic("Type cannot be determined as the given object is nil")
+		return errors.New("type cannot be determined as the given object is nil")
 	}
 
 	if typ.Kind() == reflect.Ptr {
@@ -313,16 +319,16 @@ func (ctx *WebRequestContext) BindRequest(request interface{}) {
 
 	metadata := ctx.handlerChain.requestObjectMetadata
 	if metadata == nil {
-		panic("You need to specify RequestObject for handler, you cannot use BindRequest function")
+		return errors.New("you need to specify RequestObject for handler, that's why you cannot use BindRequest function")
 	}
 
 	if metadata.typ != typ {
-		panic("Request object and type don't match.")
+		return errors.New("request object and type don't match")
 	}
 
 	body := ctx.fastHttpRequestContext.Request.Body()
 	if metadata.hasOnlyBody {
-		contentType, ok := ctx.GetHeaderValue("Content-Type")
+		contentType, ok := ctx.GetRequestHeader(fasthttp.HeaderContentType)
 		if !ok {
 			contentType = MediaTypeApplicationJsonValue
 		}
@@ -330,15 +336,15 @@ func (ctx *WebRequestContext) BindRequest(request interface{}) {
 		if contentType == MediaTypeApplicationJsonValue {
 			err := json.Unmarshal(body, request)
 			if err != nil {
-				panic(err)
+				return err
 			}
 		} else {
 			err := xml.Unmarshal(body, request)
 			if err != nil {
-				panic(err)
+				return err
 			}
 		}
-		return
+		return nil
 	}
 
 	val := reflect.ValueOf(request)
@@ -348,7 +354,7 @@ func (ctx *WebRequestContext) BindRequest(request interface{}) {
 
 	if metadata.bodyMetadata.fieldIndex != -1 {
 		bodyValue := val.Field(metadata.bodyMetadata.fieldIndex)
-		contentType, ok := ctx.GetHeaderValue("Content-Type")
+		contentType, ok := ctx.GetRequestHeader(fasthttp.HeaderContentType)
 		if !ok {
 			contentType = MediaTypeApplicationJsonValue
 		}
@@ -356,12 +362,12 @@ func (ctx *WebRequestContext) BindRequest(request interface{}) {
 		if contentType == MediaTypeApplicationJsonValue {
 			err := json.Unmarshal(body, bodyValue.Addr().Interface())
 			if err != nil {
-				panic(err)
+				return err
 			}
 		} else if contentType == MediaTypeApplicationXmlValue {
 			err := xml.Unmarshal(body, bodyValue.Addr().Interface())
 			if err != nil {
-				panic(err)
+				return err
 			}
 		}
 	}
@@ -404,7 +410,7 @@ func (ctx *WebRequestContext) BindRequest(request interface{}) {
 		headerStruct := val.Field(metadata.headerMetadata.fieldIndex)
 		for tagValue, fieldMetadata := range metadata.headerMetadata.headerMap {
 			headerField := headerStruct.Field(fieldMetadata.index)
-			headerValue, ok := ctx.GetHeaderValue(tagValue)
+			headerValue, ok := ctx.GetRequestHeader(tagValue)
 			if !ok {
 				continue
 			}
@@ -416,11 +422,12 @@ func (ctx *WebRequestContext) BindRequest(request interface{}) {
 			}
 		}
 	}
-
+	return nil
 }
 
 func (ctx *WebRequestContext) SetResponseStatus(status int) ResponseBodyBuilder {
 	ctx.responseEntity.status = status
+	ctx.responseEntity.location = ""
 	return ctx
 }
 
@@ -441,7 +448,8 @@ func (ctx *WebRequestContext) SetResponseContentType(mediaType MediaType) Respon
 	return ctx
 }
 
-func (ctx *WebRequestContext) AddHeader(key string, value string) ResponseHeaderBuilder {
+func (ctx *WebRequestContext) AddResponseHeader(key string, value string) ResponseHeaderBuilder {
+	ctx.fastHttpRequestContext.Response.Header.Add(key, value)
 	return ctx
 }
 
@@ -455,6 +463,14 @@ func (ctx *WebRequestContext) GetResponseBody() []byte {
 
 func (ctx *WebRequestContext) GetResponseContentType() MediaType {
 	return ctx.responseEntity.contentType
+}
+
+func (ctx *WebRequestContext) GetResponseHeader(key string) (string, bool) {
+	val := ctx.fastHttpRequestContext.Response.Header.Peek(key)
+	if val == nil {
+		return "", false
+	}
+	return string(val), true
 }
 
 func (ctx *WebRequestContext) Ok() ResponseBodyBuilder {
@@ -488,6 +504,7 @@ func (ctx *WebRequestContext) Accepted() ResponseBodyBuilder {
 
 func (ctx *WebRequestContext) Created(location string) ResponseBodyBuilder {
 	ctx.responseEntity.status = http.StatusCreated
+	ctx.responseEntity.location = location
 	ctx.httpError = nil
 	return ctx
 }
