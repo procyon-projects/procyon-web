@@ -19,6 +19,7 @@ type ProcyonRouter struct {
 	recoveryActive      bool
 	errorHandlerManager *errorHandlerManager
 	validator           Validator
+	requestBinder       RequestBinder
 }
 
 func newProcyonRouterForBenchmark(context context.ConfigurableApplicationContext, handlerRegistry SimpleHandlerRegistry) *ProcyonRouter {
@@ -45,6 +46,7 @@ func NewProcyonRouter(context context.ConfigurableApplicationContext) *ProcyonRo
 		generateContextId: true,
 		recoveryActive:    true,
 		validator:         newDefaultValidator(),
+		requestBinder:     newDefaultRequestBinder(),
 	}
 	router.requestContextPool = &sync.Pool{
 		New: router.newWebRequestContext,
@@ -76,6 +78,11 @@ func (router *ProcyonRouter) configure() {
 	customValidator, _ := peaFactory.GetPeaByType(goo.GetType((*Validator)(nil)))
 	if customValidator != nil {
 		router.validator = customValidator.(Validator)
+	}
+
+	customRequestBinder, _ := peaFactory.GetPeaByType(goo.GetType((*RequestBinder)(nil)))
+	if customRequestBinder != nil {
+		router.requestBinder = customRequestBinder.(RequestBinder)
 	}
 }
 
