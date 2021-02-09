@@ -169,7 +169,3 @@ search:
 	}
 
 }
-
-func (node *RouterPathNode) updateMetadata(pathVariableIndex int, pathVariableName string) {
-
-}

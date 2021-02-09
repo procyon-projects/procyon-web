@@ -260,6 +260,10 @@ func (methodTree *RouterMethodTree) findHandler(ctx *WebRequestContext) {
 search:
 	for {
 
+		if node == nil {
+			return
+		}
+
 		if index == pathLength {
 			if index-processed == node.length || node.path[node.length-1] == 47 {
 				ctx.handlerChain = node.handlerChain
