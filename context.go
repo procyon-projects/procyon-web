@@ -395,3 +395,15 @@ func (ctx *WebRequestContext) IsCanceled() bool {
 func (ctx *WebRequestContext) IsCompleted() bool {
 	return ctx.completed && !ctx.canceled
 }
+
+type MvcRequestContext interface {
+	SetViewName(name string) MvcRequestContext
+	GetViewName() string
+	SetStatus(status int) MvcRequestContext
+	GetStatus() int
+	AddObject(name string, value interface{}) MvcRequestContext
+	SetError(err error) MvcRequestContext
+}
+
+type RestRequestContext interface {
+}
