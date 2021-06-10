@@ -9,34 +9,36 @@ import (
 	"github.com/valyala/fasthttp"
 	"net/http"
 	"strconv"
+	"strings"
+	"unsafe"
 )
 
-type ProcyonServerApplicationContext struct {
+type ServerApplicationContext struct {
 	*context.BaseApplicationContext
 	server Server
 }
 
-func NewProcyonServerApplicationContext(appId context.ApplicationId, contextId context.ContextId) *ProcyonServerApplicationContext {
-	ctx := &ProcyonServerApplicationContext{}
+func NewProcyonServerApplicationContext(appId context.ApplicationId, contextId context.ContextId) *ServerApplicationContext {
+	ctx := &ServerApplicationContext{}
 	applicationContext := context.NewBaseApplicationContext(appId, contextId, ctx)
 	ctx.BaseApplicationContext = applicationContext
 	return ctx
 }
 
-func (ctx *ProcyonServerApplicationContext) GetWebServer() Server {
+func (ctx *ServerApplicationContext) GetWebServer() Server {
 	return ctx.server
 }
 
-func (ctx *ProcyonServerApplicationContext) Configure() {
+func (ctx *ServerApplicationContext) Configure() {
 	ctx.BaseApplicationContext.Configure()
 }
 
-func (ctx *ProcyonServerApplicationContext) OnConfigure() {
+func (ctx *ServerApplicationContext) OnConfigure() {
 	ctx.initializeInterceptors()
 	_ = ctx.createWebServer()
 }
 
-func (ctx *ProcyonServerApplicationContext) initializeInterceptors() {
+func (ctx *ServerApplicationContext) initializeInterceptors() {
 	peaFactory := ctx.BaseApplicationContext.GetPeaFactory()
 	peaDefinitionRegistry := peaFactory.(peas.PeaDefinitionRegistry)
 	peaNames := peaDefinitionRegistry.GetPeaDefinitionNames()
@@ -50,7 +52,7 @@ func (ctx *ProcyonServerApplicationContext) initializeInterceptors() {
 	}
 }
 
-func (ctx *ProcyonServerApplicationContext) isHandlerInterceptor(typ goo.Type) bool {
+func (ctx *ServerApplicationContext) isHandlerInterceptor(typ goo.Type) bool {
 	peaType := typ
 	if peaType.IsFunction() {
 		peaType = peaType.ToFunctionType().GetFunctionReturnTypes()[0]
@@ -69,7 +71,7 @@ func (ctx *ProcyonServerApplicationContext) isHandlerInterceptor(typ goo.Type) b
 	return false
 }
 
-func (ctx *ProcyonServerApplicationContext) FinishConfigure() {
+func (ctx *ServerApplicationContext) FinishConfigure() {
 	logger := ctx.GetLogger()
 	startedChannel := make(chan bool, 1)
 	go func() {
@@ -82,7 +84,7 @@ func (ctx *ProcyonServerApplicationContext) FinishConfigure() {
 	<-startedChannel
 }
 
-func (ctx *ProcyonServerApplicationContext) createWebServer() error {
+func (ctx *ServerApplicationContext) createWebServer() error {
 	ctx.server = newProcyonWebServer(ctx.BaseApplicationContext)
 	return nil
 }
@@ -223,49 +225,6 @@ func (ctx *WebRequestContext) addPathVariableValue(pathVariableName string) {
 	ctx.pathVariableCount++
 }
 
-func (ctx *WebRequestContext) getPathByteArray() []byte {
-	if ctx.uri == nil {
-		ctx.uri = ctx.fastHttpRequestContext.URI()
-		ctx.path = ctx.uri.Path()
-	}
-	return ctx.path
-}
-
-func (ctx *WebRequestContext) GetPath() string {
-	if len(ctx.path) == 0 {
-		return string(ctx.getPathByteArray())
-	}
-	return string(ctx.path)
-}
-
-func (ctx *WebRequestContext) GetPathVariable(name string) (string, bool) {
-	for index, pathVariableName := range ctx.handlerChain.pathVariables {
-		if pathVariableName == name {
-			return ctx.pathVariables[index], true
-		}
-	}
-	return "", false
-}
-
-func (ctx *WebRequestContext) GetRequestParameter(name string) (string, bool) {
-	if ctx.args == nil {
-		ctx.args = ctx.fastHttpRequestContext.QueryArgs()
-	}
-	result := ctx.args.Peek(name)
-	if result == nil {
-		return "", false
-	}
-	return string(result), true
-}
-
-func (ctx *WebRequestContext) GetRequestHeader(key string) (string, bool) {
-	val := ctx.fastHttpRequestContext.Request.Header.Peek(key)
-	if val == nil {
-		return "", false
-	}
-	return string(val), true
-}
-
 func (ctx *WebRequestContext) GetRequestBody() []byte {
 	return ctx.fastHttpRequestContext.Request.Body()
 }
@@ -278,48 +237,8 @@ func (ctx *WebRequestContext) BindRequest(request interface{}) error {
 	return ctx.router.requestBinder.BindRequest(request, ctx)
 }
 
-func (ctx *WebRequestContext) SetResponseStatus(status int) ResponseBodyBuilder {
-	ctx.responseEntity.status = status
-	ctx.responseEntity.location = ""
-	return ctx
-}
-
-func (ctx *WebRequestContext) SetModel(model interface{}) ResponseBodyBuilder {
-	if model == nil {
-		return ctx
-	}
-	ctx.responseEntity.model = model
-	return ctx
-}
-
-func (ctx *WebRequestContext) GetModel() interface{} {
-	return ctx.responseEntity.model
-}
-
-func (ctx *WebRequestContext) SetResponseContentType(mediaType MediaType) ResponseBodyBuilder {
-	ctx.responseEntity.contentType = mediaType
-	return ctx
-}
-
-func (ctx *WebRequestContext) AddResponseHeader(key string, value string) ResponseHeaderBuilder {
-	ctx.fastHttpRequestContext.Response.Header.Add(key, value)
-	return ctx
-}
-
-func (ctx *WebRequestContext) GetResponseLocation() string {
-	return ctx.responseEntity.location
-}
-
-func (ctx *WebRequestContext) GetResponseStatus() int {
-	return ctx.responseEntity.status
-}
-
 func (ctx *WebRequestContext) GetResponseBody() []byte {
 	return ctx.fastHttpRequestContext.Response.Body()
-}
-
-func (ctx *WebRequestContext) GetResponseContentType() MediaType {
-	return ctx.responseEntity.contentType
 }
 
 func (ctx *WebRequestContext) GetResponseHeader(key string) (string, bool) {
@@ -328,42 +247,6 @@ func (ctx *WebRequestContext) GetResponseHeader(key string) (string, bool) {
 		return "", false
 	}
 	return string(val), true
-}
-
-func (ctx *WebRequestContext) Ok() ResponseBodyBuilder {
-	ctx.responseEntity.status = http.StatusOK
-	return ctx
-}
-
-func (ctx *WebRequestContext) NotFound() ResponseHeaderBuilder {
-	ctx.responseEntity.status = http.StatusNotFound
-	ctx.httpError = HttpErrorNotFound
-	return ctx
-}
-
-func (ctx *WebRequestContext) NoContent() ResponseHeaderBuilder {
-	ctx.responseEntity.status = http.StatusNoContent
-	ctx.httpError = HttpErrorNoContent
-	return ctx
-}
-
-func (ctx *WebRequestContext) BadRequest() ResponseBodyBuilder {
-	ctx.responseEntity.status = http.StatusBadRequest
-	ctx.httpError = HttpErrorBadRequest
-	return ctx
-}
-
-func (ctx *WebRequestContext) Accepted() ResponseBodyBuilder {
-	ctx.responseEntity.status = http.StatusAccepted
-	ctx.httpError = nil
-	return ctx
-}
-
-func (ctx *WebRequestContext) Created(location string) ResponseBodyBuilder {
-	ctx.responseEntity.status = http.StatusCreated
-	ctx.responseEntity.location = location
-	ctx.httpError = nil
-	return ctx
 }
 
 func (ctx *WebRequestContext) GetHTTPError() *HTTPError {
@@ -380,10 +263,6 @@ func (ctx *WebRequestContext) SetHTTPError(err *HTTPError) {
 	}
 }
 
-func (ctx *WebRequestContext) ThrowError(err error) {
-	panic(err)
-}
-
 func (ctx *WebRequestContext) IsSuccess() bool {
 	return !ctx.crashed
 }
@@ -393,17 +272,107 @@ func (ctx *WebRequestContext) IsCanceled() bool {
 }
 
 func (ctx *WebRequestContext) IsCompleted() bool {
+	ctx.fastHttpRequestContext.Response.SetBody()
 	return ctx.completed && !ctx.canceled
 }
 
 type MvcRequestContext interface {
-	SetViewName(name string) MvcRequestContext
+	GetRequestHeader(name string) (string, bool)
+	GetQueryParameter(name string) (string, bool)
+	GetPathVariable(name string) (string, bool)
+	SetError(err error)
+	AddObject(name string, value interface{})
+	SetViewName(name string)
 	GetViewName() string
-	SetStatus(status int) MvcRequestContext
+	SetStatus(status int)
 	GetStatus() int
-	AddObject(name string, value interface{}) MvcRequestContext
-	SetError(err error) MvcRequestContext
 }
 
 type RestRequestContext interface {
+	GetPath() string
+	GetRequestHeader(name string) (string, bool)
+	GetQueryParameter(name string) (string, bool)
+	GetPathVariable(name string) (string, bool)
+	Response() Response
+}
+
+type restRequestContext struct {
+	// request context
+	requestContext *fasthttp.RequestCtx
+	args           *fasthttp.Args
+	uri            *fasthttp.URI
+	// path variables
+	pathVariables     [20]string
+	pathVariableCount int
+	// handler
+	handlerChain *HandlerChain
+	handlerIndex int
+	// response entity
+	responseEntity *ResponseEntity
+}
+
+func (ctx *restRequestContext) clear() {
+	ctx.args = nil
+	ctx.uri = nil
+	ctx.pathVariableCount = 0
+	ctx.handlerIndex = 0
+	ctx.handlerChain = nil
+	ctx.responseEntity.reset()
+}
+
+func (ctx *restRequestContext) GetPath() string {
+	if ctx.uri == nil {
+		ctx.uri = ctx.requestContext.URI()
+	}
+
+	return *(*string)(unsafe.Pointer(&ctx.uri))
+}
+
+func (ctx *restRequestContext) GetRequestHeader(name string) (string, bool) {
+	value := ctx.requestContext.Request.Header.Peek(name)
+
+	if value == nil {
+		return "", false
+	}
+
+	return *(*string)(unsafe.Pointer(&value)), true
+}
+
+func (ctx *restRequestContext) GetQueryParameter(name string) (string, bool) {
+	if ctx.args == nil {
+		ctx.args = ctx.requestContext.QueryArgs()
+	}
+
+	result := ctx.args.Peek(name)
+
+	if result == nil {
+		return "", false
+	}
+
+	return *(*string)(unsafe.Pointer(&result)), true
+}
+
+func (ctx *restRequestContext) GetPathVariable(name string) (string, bool) {
+	for index, pathVariableName := range ctx.handlerChain.pathVariables {
+
+		if pathVariableName == name {
+			return ctx.pathVariables[index], true
+		}
+
+	}
+
+	return "", false
+}
+
+func (ctx *restRequestContext) Response() Response {
+	return ctx.responseEntity
+}
+
+func x(ctx RestRequestContext) error {
+	ctx.Response().
+		Status(http.StatusUnauthorized).
+		Body("").
+		ContentType(MediaTypeJson)
+
+	return nil
 }
