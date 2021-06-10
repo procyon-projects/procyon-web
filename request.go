@@ -18,28 +18,27 @@ type RequestHandlerObject interface{}
 type RequestHandlerFunction = func(context *WebRequestContext)
 type RequestHandlerOption func(handler *RequestHandler)
 
-type RequestMethod string
+type HttpMethod string
 
 const (
-	unknownMethod        RequestMethod = "[unknown-method]"
-	RequestMethodGet     RequestMethod = http.MethodGet
-	RequestMethodPost    RequestMethod = http.MethodPost
-	RequestMethodPut     RequestMethod = http.MethodPut
-	RequestMethodDelete  RequestMethod = http.MethodDelete
-	RequestMethodPatch   RequestMethod = http.MethodPatch
-	RequestMethodOptions RequestMethod = http.MethodOptions
-	RequestMethodHead    RequestMethod = http.MethodHead
+	HttpMethodGet     HttpMethod = http.MethodGet
+	HttpMethodPost    HttpMethod = http.MethodPost
+	HttpMethodPut     HttpMethod = http.MethodPut
+	HttpMethodDelete  HttpMethod = http.MethodDelete
+	HttpMethodPatch   HttpMethod = http.MethodPatch
+	HttpMethodOptions HttpMethod = http.MethodOptions
+	HttpMethodHead    HttpMethod = http.MethodHead
 )
 
 type RequestHandler struct {
 	Path                  string
-	Method                RequestMethod
+	Method                HttpMethod
 	HandlerFunc           RequestHandlerFunction
 	RequestObject         RequestHandlerObject
 	requestObjectMetadata *RequestObjectMetadata
 }
 
-func newHandler(handler RequestHandlerFunction, method RequestMethod, options ...RequestHandlerOption) RequestHandler {
+func newHandler(handler RequestHandlerFunction, method HttpMethod, options ...RequestHandlerOption) RequestHandler {
 	if handler == nil {
 		panic("Handler must not be null")
 	}
