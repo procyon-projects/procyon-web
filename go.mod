@@ -12,5 +12,5 @@ require (
 	github.com/procyon-projects/procyon-core v0.1.0
 	github.com/procyon-projects/procyon-peas v0.1.0
 	github.com/stretchr/testify v1.6.1
-	github.com/valyala/fasthttp v1.26.0
+	github.com/valyala/fasthttp v1.34.0
 )
